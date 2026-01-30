@@ -12,30 +12,49 @@ import KiriFFI
     return
   }
 
+  let completionToken = CompletionToken(completionContext)
+
   let requestData = Data(bytes: requestPointer, count: requestLength)
 
-  guard
-    let request = FrameCodec.decodeRequest(requestData),
-    let handler = RouteRegistry.shared.handler(for: handlerId)
-  else {
-    let response = FrameCodec.encodeResponse(.internalServerError("handler missing or bad request"))
-    response.withUnsafeBytes { raw in
-      #warning("This could be unsage. Make sure rust_complete is called exactly once per request.")
-      rust_complete(completionContext, raw.bindMemory(to: UInt8.self).baseAddress, response.count)
-    }
+  guard let request = FrameCodec.decodeRequest(requestData) else {
+    completionToken.complete(.internalServerError("cannot decode request"))
     return
   }
 
-  let contextAddress = UInt(bitPattern: completionContext)
+  guard let handler = RouteRegistry.shared.handler(for: handlerId) else {
+    completionToken.complete(.internalServerError("missing handler"))
+    return
+  }
+
   Task {
     let response = await handler(request)
-    let responseData = FrameCodec.encodeResponse(response)
-    let context = UnsafeMutableRawPointer(bitPattern: contextAddress)
-
-    responseData.withUnsafeBytes { raw in
-      rust_complete(context, raw.bindMemory(to: UInt8.self).baseAddress, responseData.count)
-    }
+    completionToken.complete(response)
   }
 }
 
-// TODO: final class CompletionToken {}
+fileprivate final class CompletionToken: @unchecked Sendable {
+  private let lock = NSLock()
+  private var context: UnsafeMutableRawPointer?
+
+  init(_ context: UnsafeMutableRawPointer?) {
+    self.context = context
+  }
+
+  @discardableResult
+  func complete(_ response: Response) -> Bool {
+    lock.lock()
+    let context = context.take()
+    lock.unlock()
+
+    guard let context else {
+      return false
+    }
+
+    let data = FrameCodec.encodeResponse(response)
+    data.withUnsafeBytes { raw in
+      let pointer = raw.bindMemory(to: UInt8.self).baseAddress
+      rust_complete(context, pointer, data.count)
+    }
+    return true
+  }
+}
