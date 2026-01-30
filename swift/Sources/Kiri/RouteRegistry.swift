@@ -1,16 +1,17 @@
 import Foundation
 
-final class RouteRegistry {
+final class RouteRegistry: @unchecked Sendable {
   typealias RouteID = UInt16
+
+  public static let shared = RouteRegistry()
 
   private let lock = NSLock()
 
-  #warning("This is not safe if multiple app instances are running in the same program.")
   private var nextId: RouteID
 
   private var handlers: [RouteID: RouteHandler]
 
-  init() {
+  private init() {
     nextId = 0
     handlers = [:]
   }

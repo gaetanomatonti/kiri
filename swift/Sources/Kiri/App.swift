@@ -3,11 +3,9 @@ import Foundation
 
 final public class App {
   private let server: Server
-  private let routeRegistry: RouteRegistry
 
   public init(port: UInt16) {
     server = Server(port: port)
-    routeRegistry = RouteRegistry()
   }
 
   public func start() {
@@ -27,7 +25,7 @@ final public class App {
   }
 
   public func get(_ pattern: String, _ handler: @escaping RouteHandler) {
-    let routeId = routeRegistry.register(handler)
+    let routeId = RouteRegistry.shared.register(handler)
     server.registerRoute(method: .get, pattern: pattern, routeId: routeId)
   }
 }
