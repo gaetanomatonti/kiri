@@ -17,7 +17,7 @@ async fn handle(
     let method = router::method_to_u8(request.method());
     let path = request.uri().path();
 
-    let guard = routes.read().unwrap();
+    let guard = routes.read().await;
     let route = guard
         .iter()
         .find(|r: &&Route| r.method == method && router::matches(&r.pattern, path));

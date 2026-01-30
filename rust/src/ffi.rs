@@ -4,10 +4,9 @@ use crate::{
 };
 use std::{
     sync::Arc,
-    sync::RwLock,
     thread::{self, JoinHandle},
 };
-use tokio::sync::oneshot;
+use tokio::sync::{RwLock, oneshot};
 
 #[repr(C)]
 pub struct ServerHandle {
@@ -85,7 +84,7 @@ pub extern "C" fn register_route(
     };
 
     let h = unsafe { &mut *handle };
-    let mut routes = h.routes.write().unwrap();
+    let mut routes = h.routes.blocking_write();
     routes.push(Route {
         method,
         pattern,
