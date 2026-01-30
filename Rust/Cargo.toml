@@ -1,0 +1,11 @@
+[package]
+name = "kiri"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+hyper = { version = "0.14", features = ["server", "http1", "tcp"] }

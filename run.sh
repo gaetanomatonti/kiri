@@ -1,6 +1,6 @@
 cargo build --release
 
-swiftc main.swift \
+swiftc Swift/main.swift \
 -L "$(pwd)/target/release" \
 -l kiri \
 -o kiri
