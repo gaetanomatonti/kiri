@@ -1,11 +1,34 @@
 import KiriFFI
 
-public typealias ServerHandle = UnsafeMutableRawPointer
+final public class Server {
+  typealias ServerHandle = UnsafeMutableRawPointer
 
-public func startServer(port: UInt16) -> ServerHandle {
-  server_start(port)
-}
+  let port: UInt16
 
-public func stopServer(_ handle: ServerHandle) {
-  server_stop(handle)
+  private var serverHandle: ServerHandle?
+
+  public init(port: UInt16) {
+    self.port = port
+  }
+
+  deinit {
+    stop()
+  }
+
+  public func start() {
+    guard serverHandle == nil else {
+      return
+    }
+
+    serverHandle = server_start(port)
+  }
+
+  public func stop() {
+    guard let serverHandle else {
+      return
+    }
+
+    server_stop(serverHandle)
+    self.serverHandle = nil
+  }
 }

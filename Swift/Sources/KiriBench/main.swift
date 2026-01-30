@@ -1,8 +1,12 @@
 import Foundation
 import Kiri
 
-let handle = startServer(port: 8080)
+let server = Server(port: 8080)
+server.start()
 
-Thread.sleep(forTimeInterval: 5)
+for i in 1...5 {
+  print(i)
+  Thread.sleep(forTimeInterval: 1)
+}
 
-stopServer(handle)
+server.stop()
