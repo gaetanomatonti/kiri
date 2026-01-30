@@ -8,11 +8,16 @@ import KiriFFI
   requestLength: Int,
   completionContext: UnsafeMutableRawPointer?
 ) {
-  guard let requestPointer, let completionContext else {
+  guard let completionContext else {
     return
   }
 
   let completionToken = CompletionToken(completionContext)
+
+  guard let requestPointer, requestLength > 0 else {
+    completionToken.complete(.internalServerError("bad request frame"))
+    return
+  }
 
   let requestData = Data(bytes: requestPointer, count: requestLength)
 
