@@ -1,5 +1,0 @@
-module KiriFFI {
-  header "kiri_ffi.h"
-  link "kiri_ffi"
-  export *
-}
