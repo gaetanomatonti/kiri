@@ -1,2 +1,7 @@
+/artifacts
+
+# Rust
 /target
-kiri
+
+# Swift
+Swift/.build
