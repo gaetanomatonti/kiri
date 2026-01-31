@@ -8,8 +8,8 @@ final public class App {
     server = Server(port: port)
   }
 
-  public func start() {
-    server.start()
+  public func start() throws {
+    try server.start()
   }
 
   public func stop() {

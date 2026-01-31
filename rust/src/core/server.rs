@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::mpsc};
 
 use hyper::{
     Body, Request, Response, Server,
@@ -66,7 +66,12 @@ async fn handle(
     return Ok(response);
 }
 
-pub fn run_server(port: u16, shutdown_receiver: oneshot::Receiver<()>, routes: SharedRoutes) {
+pub fn run_server(
+    port: u16,
+    shutdown_receiver: oneshot::Receiver<()>,
+    routes: SharedRoutes,
+    ready_transmitter: mpsc::Sender<Result<(), String>>,
+) {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -75,15 +80,25 @@ pub fn run_server(port: u16, shutdown_receiver: oneshot::Receiver<()>, routes: S
     runtime.block_on(async move {
         let address = SocketAddr::from(([127, 0, 0, 1], port));
 
-        let make_svc = make_service_fn(move |_connection| {
+        let builder = match Server::try_bind(&address) {
+            Ok(builder) => {
+                let _ = ready_transmitter.send(Ok(()));
+                builder
+            }
+            Err(e) => {
+                let _ = ready_transmitter.send(Err(format!("bind {} failed: {}", address, e)));
+                return;
+            }
+        };
+
+        let make_service = make_service_fn(move |_connection| {
             let routes = routes.clone();
             async move {
                 Ok::<_, hyper::Error>(service_fn(move |request| handle(request, routes.clone())))
             }
         });
 
-        let server = Server::bind(&address).serve(make_svc);
-
+        let server = builder.serve(make_service);
         let graceful = server.with_graceful_shutdown(async move {
             // When the shutdown request is received, shut the server down gracefully.
             let _ = shutdown_receiver.await;

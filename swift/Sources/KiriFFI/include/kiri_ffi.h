@@ -17,3 +17,6 @@ int32_t register_route(
 void rust_complete(void* completion_ctx, const uint8_t* resp_ptr, size_t resp_len);
 void rust_release(void *completion_ctx);
 bool rust_is_cancelled(const void *completion_ctx);
+
+char* last_error_message(void);
+void last_error_message_free(char *s);

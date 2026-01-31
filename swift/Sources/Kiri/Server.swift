@@ -1,4 +1,17 @@
+import Foundation
 import KiriFFI
+
+struct ServerError: Error, LocalizedError {
+  let message: String
+
+  var errorDescription: String? {
+    message
+  }
+
+  init(_ message: String) {
+    self.message = message
+  }
+}
 
 final class Server {
   typealias ServerHandle = UnsafeMutableRawPointer
@@ -15,12 +28,16 @@ final class Server {
     stop()
   }
 
-  func start() {
+  func start() throws {
     guard serverHandle == nil else {
       return
     }
 
     serverHandle = server_start(port)
+
+    guard serverHandle != nil else {
+      throw ServerError(lastError() ?? "Unexpected error")
+    }
   }
 
   func stop() {
