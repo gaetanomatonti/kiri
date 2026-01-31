@@ -11,10 +11,6 @@ public func dispatch(
   requestLength: Int,
   completionContext: UnsafeMutableRawPointer?
 ) {
-  guard let completionContext else {
-    return
-  }
-
   // Wrap the pointer into a completion token, to make sure we complete (and free the pointer) exactly once.
   // This is necessary because only Swift is responsible for freeing the context pointer,
   // so freeing multiple times can cause double free/use-after-free.
@@ -26,7 +22,6 @@ public func dispatch(
   }
 
   let requestData = Data(bytes: requestPointer, count: requestLength)
-
   guard let request = FrameCodec.decodeRequest(requestData) else {
     completionToken.complete(with: .internalServerError("cannot decode request"))
     return
@@ -51,14 +46,18 @@ fileprivate final class CompletionToken: @unchecked Sendable {
     self.context = context
   }
 
-  @discardableResult
-  func complete(with response: Response) -> Bool {
-    lock.lock()
-    let context = context.take()
-    lock.unlock()
+  deinit {
+    release()
+  }
 
-    guard let context else {
-      return false
+  func complete(with response: Response) {
+    guard let context = takeContext() else {
+      return
+    }
+
+    if rust_is_cancelled(context) {
+      rust_release(context)
+      return
     }
 
     let data = FrameCodec.encodeResponse(response)
@@ -66,6 +65,23 @@ fileprivate final class CompletionToken: @unchecked Sendable {
       let pointer = raw.bindMemory(to: UInt8.self).baseAddress
       rust_complete(context, pointer, data.count)
     }
-    return true
+    return
+  }
+
+  private func takeContext() -> UnsafeMutableRawPointer? {
+    lock.lock()
+    defer {
+      lock.unlock()
+    }
+
+    return context.take()
+  }
+
+  private func release() {
+    guard let context = takeContext() else {
+      return
+    }
+
+    rust_release(context)
   }
 }
