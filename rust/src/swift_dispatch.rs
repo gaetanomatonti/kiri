@@ -14,13 +14,14 @@ const STATE_PENDING: u8 = 0;
 const STATE_COMPLETED: u8 = 1;
 const STATE_CANCELLED: u8 = 2;
 
-struct Inner {
-    state: AtomicU8,
-    transmitter: Mutex<Option<oneshot::Sender<Vec<u8>>>>,
-}
-
 /// Context containing the transmitter used to send the response of the handled request.
 struct CompletionContext {
+    /// The state of the request.
+    /// Possible values:
+    /// - STATE_PENDING = 0
+    /// - STATE_COMPLETED = 1
+    /// - STATE_CANCELLED = 2
+    state: AtomicU8,
     /// Use this transmitter to send the response of the request handled by the Swift runtime.
     transmitter: Option<oneshot::Sender<Vec<u8>>>,
 }
@@ -35,13 +36,14 @@ unsafe extern "C" {
     );
 }
 
+/// Swift calls this to check if a request has been cancelled.
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_is_cancelled(context: *const std::ffi::c_void) -> bool {
     if context.is_null() {
         return true;
     }
 
-    let inner = unsafe { Arc::from_raw(context as *const Inner) };
+    let inner = unsafe { Arc::from_raw(context as *const CompletionContext) };
     let cancelled = inner.state.load(Ordering::Acquire) == STATE_CANCELLED;
     // We explicitly tell the Arc to not dereference inner.
     // This is necessary for the context to outlive the scope of this functions,
@@ -51,6 +53,16 @@ pub extern "C" fn rust_is_cancelled(context: *const std::ffi::c_void) -> bool {
     // let inner: &Inner = unsafe { &*(context as *const Inner) };
 
     return cancelled;
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_release(context: *const std::ffi::c_void) {
+    if context.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Arc::from_raw(context as *const CompletionContext));
+    }
 }
 
 /// This function is called by the Swift runtime to signal that a request has been completed,
