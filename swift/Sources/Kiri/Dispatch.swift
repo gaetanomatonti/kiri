@@ -1,8 +1,11 @@
 import Foundation
 import KiriFFI
 
+/// This functions is called by the Rust runtime when it receives a request,
+// delegating the needed handling to Swift.
+// Rust passes a `completionContext` to communicate the completion of the request from the Swift runtime to Rust's.
 @_cdecl("swift_dispatch")
-  public func dispatch(
+public func dispatch(
   handlerId: UInt16,
   requestPointer: UnsafePointer<UInt8>?,
   requestLength: Int,
@@ -12,28 +15,29 @@ import KiriFFI
     return
   }
 
+  // Wrap the pointer into a completion token, to make sure we complete (and free the pointer) exactly once.
   let completionToken = CompletionToken(completionContext)
 
   guard let requestPointer, requestLength > 0 else {
-    completionToken.complete(.internalServerError("bad request frame"))
+    completionToken.complete(with: .internalServerError("bad request frame"))
     return
   }
 
   let requestData = Data(bytes: requestPointer, count: requestLength)
 
   guard let request = FrameCodec.decodeRequest(requestData) else {
-    completionToken.complete(.internalServerError("cannot decode request"))
+    completionToken.complete(with: .internalServerError("cannot decode request"))
     return
   }
 
-  guard let handler = RouteRegistry.shared.handler(for: handlerId) else {
-    completionToken.complete(.internalServerError("missing handler"))
+  guard let handle = RouteRegistry.shared.handler(for: handlerId) else {
+    completionToken.complete(with: .internalServerError("missing handler"))
     return
   }
 
   Task {
-    let response = await handler(request)
-    completionToken.complete(response)
+    let response = await handle(request)
+    completionToken.complete(with: response)
   }
 }
 
@@ -46,7 +50,7 @@ fileprivate final class CompletionToken: @unchecked Sendable {
   }
 
   @discardableResult
-  func complete(_ response: Response) -> Bool {
+  func complete(with response: Response) -> Bool {
     lock.lock()
     let context = context.take()
     lock.unlock()

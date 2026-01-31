@@ -1,6 +1,6 @@
 use crate::{
     server::run_server,
-    types::{Route, SharedRoutes},
+    types::{HandlerId, Route, SharedRoutes},
 };
 use std::{
     sync::Arc,
@@ -71,7 +71,7 @@ pub extern "C" fn register_route(
     method: u8,
     pattern_ptr: *const u8,
     pattern_len: usize,
-    handler_id: u16,
+    handler_id: HandlerId,
 ) -> i32 {
     if handle.is_null() || pattern_ptr.is_null() {
         return -1;

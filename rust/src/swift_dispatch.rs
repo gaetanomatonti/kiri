@@ -2,19 +2,26 @@ use std::slice;
 
 use tokio::sync::oneshot;
 
+use crate::types::HandlerId;
+
 unsafe extern "C" {
+    /// Kiri Swift exposes this function to allow other runtimes to dispatch request handling.
     fn swift_dispatch(
-        handler_id: u16,
+        handler_id: HandlerId,
         req_ptr: *const u8,
         req_len: usize,
         completion_ctx: *mut std::ffi::c_void,
     );
 }
 
+/// Context containing the transmitter used to send the response of the handled request.
 struct CompletionContext {
-    tx: Option<oneshot::Sender<Vec<u8>>>,
+    /// Use this transmitter to send the response of the request handled by the Swift runtime.
+    transmitter: Option<oneshot::Sender<Vec<u8>>>,
 }
 
+/// This function is called by the Swift runtime to signal that a request has been completed,
+/// by passing the completion context, and the response content.
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_complete(
     completion_ctx: *mut std::ffi::c_void,
@@ -30,19 +37,22 @@ pub extern "C" fn rust_complete(
 
     let bytes = unsafe { slice::from_raw_parts(resp_ptr, resp_len) }.to_vec();
 
-    if let Some(tx) = boxed.tx.take() {
-        let _ = tx.send(bytes);
+    if let Some(transmitter) = boxed.transmitter.take() {
+        let _ = transmitter.send(bytes);
     }
 }
 
-pub async fn dispatch_to_swift(handler_id: u16, req_frame: &[u8]) -> Result<Vec<u8>, ()> {
-    let (tx, rx) = oneshot::channel::<Vec<u8>>();
-    let context = Box::new(CompletionContext { tx: Some(tx) });
+/// Delegates the handling of the request to the Swift runtime.
+pub async fn dispatch_to_swift(handler_id: HandlerId, req_frame: &[u8]) -> Result<Vec<u8>, ()> {
+    let (transmitter, receiver) = oneshot::channel::<Vec<u8>>();
+    let context = Box::new(CompletionContext {
+        transmitter: Some(transmitter),
+    });
     let context_ptr = Box::into_raw(context) as *mut std::ffi::c_void;
 
     unsafe {
         swift_dispatch(handler_id, req_frame.as_ptr(), req_frame.len(), context_ptr);
     }
 
-    rx.await.map_err(|_| ())
+    receiver.await.map_err(|_| ())
 }
