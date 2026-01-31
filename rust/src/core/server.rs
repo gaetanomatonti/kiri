@@ -1,15 +1,14 @@
+use std::net::SocketAddr;
+
 use hyper::{
     Body, Request, Response, Server,
     service::{make_service_fn, service_fn},
 };
-use std::net::SocketAddr;
 use tokio::sync::oneshot;
 
 use crate::{
-    frames,
-    router::{self},
-    swift_dispatch,
-    types::SharedRoutes,
+    core::{frames, router, types::SharedRoutes},
+    runtime::dispatch,
 };
 
 async fn handle(
@@ -38,9 +37,9 @@ async fn handle(
     let body_bytes = hyper::body::to_bytes(request.into_body()).await?;
     let request_frame = frames::encode_request(method, &path, &body_bytes);
 
-    let response_frame = match swift_dispatch::dispatch_to_swift(handler_id, &request_frame).await {
+    let response_frame = match dispatch::dispatch_to_swift(handler_id, &request_frame).await {
         Ok(b) => b,
-        Err(swift_dispatch::DispatchErr::Timeout) => {
+        Err(dispatch::DispatchErr::Timeout) => {
             let mut response = Response::new(Body::from("timeout\n"));
             *response.status_mut() = hyper::StatusCode::GATEWAY_TIMEOUT;
             return Ok(response);

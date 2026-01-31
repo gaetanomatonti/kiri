@@ -1,4 +1,4 @@
-use crate::{
+use crate::core::{
     server::run_server,
     types::{HandlerId, Route, SharedRoutes},
 };
@@ -80,7 +80,7 @@ pub extern "C" fn register_route(
     let pattern_bytes = unsafe { std::slice::from_raw_parts(pattern_ptr, pattern_len) };
     let pattern = match std::str::from_utf8(pattern_bytes) {
         Ok(s) => s.to_string(),
-        Err(e) => return -2,
+        Err(_e) => return -2,
     };
 
     let h = unsafe { &mut *handle };
