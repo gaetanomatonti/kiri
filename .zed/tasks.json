@@ -1,7 +1,7 @@
 // Project tasks configuration. See https://zed.dev/docs/tasks for documentation.
 [
   {
-    "label": "Build Rust",
+    "label": "Build Kiri FFI",
     "command": "sh scripts/build-rust.sh",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
@@ -13,7 +13,19 @@
     "show_command": true,
   },
   {
-    "label": "Build Swift",
+    "label": "Test KiriBench process",
+    "command": "sh scripts/test-process.sh",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true,
+  },
+  {
+    "label": "Build KiriBench",
     "command": "swift build",
     "args": ["--package-path", "swift"],
     "use_new_terminal": false,
@@ -26,9 +38,21 @@
     "show_command": true,
   },
   {
-    "label": "Run Swift",
+    "label": "Run KiriBench",
     "command": "swift run",
     "args": ["--package-path", "swift"],
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true,
+  },
+  {
+    "label": "Build and Run KiriBench",
+    "command": "swift build --package-path swift; swift run --package-path swift; ",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
     "reveal": "always",

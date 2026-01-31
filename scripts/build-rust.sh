@@ -1,3 +1,5 @@
+#!/bin/bash
+
 SCRIPT_DIR=$(dirname "$0")
 
 echo "Building libkiri_ffi."
