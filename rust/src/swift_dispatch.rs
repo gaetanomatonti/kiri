@@ -14,6 +14,11 @@ const STATE_PENDING: u8 = 0;
 const STATE_COMPLETED: u8 = 1;
 const STATE_CANCELLED: u8 = 2;
 
+pub enum DispatchErr {
+    Timeout,
+    SwiftDropped,
+}
+
 /// Context containing the transmitter used to send the response of the handled request.
 struct CompletionContext {
     /// The state of the request.
@@ -23,7 +28,7 @@ struct CompletionContext {
     /// - STATE_CANCELLED = 2
     state: AtomicU8,
     /// Use this transmitter to send the response of the request handled by the Swift runtime.
-    transmitter: Option<oneshot::Sender<Vec<u8>>>,
+    transmitter: Mutex<Option<oneshot::Sender<Vec<u8>>>>,
 }
 
 unsafe extern "C" {
@@ -78,32 +83,64 @@ pub extern "C" fn rust_complete(
         return;
     }
 
-    let mut boxed: Box<CompletionContext> =
-        unsafe { Box::from_raw(completion_ctx as *mut CompletionContext) };
+    let context = unsafe { Arc::from_raw(completion_ctx as *const CompletionContext) };
+
+    // If the current state of the request is pending, we can safely complete the request.
+    let previous_state = context.state.compare_exchange(
+        STATE_PENDING,
+        STATE_COMPLETED,
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    );
+
+    // If request was already completed or cancelled, we drop the reference.
+    if previous_state.is_err() {
+        return;
+    }
 
     let bytes = unsafe { slice::from_raw_parts(resp_ptr, resp_len) }.to_vec();
 
-    if let Some(transmitter) = boxed.transmitter.take() {
+    let mut guard = context.transmitter.blocking_lock();
+    if let Some(transmitter) = guard.take() {
         let _ = transmitter.send(bytes);
     }
 }
 
 /// Delegates the handling of the request to the Swift runtime.
-pub async fn dispatch_to_swift(handler_id: HandlerId, req_frame: &[u8]) -> Result<Vec<u8>, ()> {
+pub async fn dispatch_to_swift(
+    handler_id: HandlerId,
+    req_frame: &[u8],
+) -> Result<Vec<u8>, DispatchErr> {
     let (transmitter, receiver) = oneshot::channel::<Vec<u8>>();
 
-    // In this case, we use Box (single ownership) because only the Swift runtime is responsible for freeing the completion context.
-    // This will be changed to Arc (shared ownership) when we introduce cancellation/timeout from Rust.
-    let context = Box::new(CompletionContext {
-        transmitter: Some(transmitter),
+    let context = Arc::new(CompletionContext {
+        state: AtomicU8::new(STATE_PENDING),
+        transmitter: Mutex::new(Some(transmitter)),
     });
-    // We get the pointer to the Box, and pass it to the Swift runtime,
-    // so that we can retrieve it back when Swift notifies the completion, and we can free the context inside the Box.
-    let context_ptr = Box::into_raw(context) as *mut std::ffi::c_void;
+
+    // Clone the context so that Rust keeps owning it, while passing a reference to Swift as well.
+    // This is needed because into_raw would move the context variable,
+    // and we wouldn't be able to use the context for cancellation logic from Rust.
+    let context_ptr = Arc::into_raw(context.clone()) as *mut std::ffi::c_void;
 
     unsafe {
         swift_dispatch(handler_id, req_frame.as_ptr(), req_frame.len(), context_ptr);
     }
 
-    receiver.await.map_err(|_| ())
+    let timeout = std::time::Duration::from_secs(5);
+    let tokio_response = tokio::time::timeout(timeout, receiver).await;
+
+    if let Err(_elapsed) = tokio_response {
+        context.state.store(STATE_CANCELLED, Ordering::Release);
+
+        let mut guard = context.transmitter.lock().await;
+        let _ = guard.take();
+        return Err(DispatchErr::Timeout);
+    } else {
+        let response = tokio_response.unwrap();
+        match response {
+            Ok(bytes) => Ok(bytes),
+            Err(_recv_closed) => Err(DispatchErr::SwiftDropped),
+        }
+    }
 }
