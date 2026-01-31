@@ -1,8 +1,29 @@
-use std::slice;
+use std::{
+    slice,
+    sync::{
+        Arc,
+        atomic::{AtomicU8, Ordering},
+    },
+};
 
-use tokio::sync::oneshot;
+use tokio::sync::{Mutex, oneshot};
 
 use crate::types::HandlerId;
+
+const STATE_PENDING: u8 = 0;
+const STATE_COMPLETED: u8 = 1;
+const STATE_CANCELLED: u8 = 2;
+
+struct Inner {
+    state: AtomicU8,
+    transmitter: Mutex<Option<oneshot::Sender<Vec<u8>>>>,
+}
+
+/// Context containing the transmitter used to send the response of the handled request.
+struct CompletionContext {
+    /// Use this transmitter to send the response of the request handled by the Swift runtime.
+    transmitter: Option<oneshot::Sender<Vec<u8>>>,
+}
 
 unsafe extern "C" {
     /// Kiri Swift exposes this function to allow other runtimes to dispatch request handling.
@@ -14,10 +35,22 @@ unsafe extern "C" {
     );
 }
 
-/// Context containing the transmitter used to send the response of the handled request.
-struct CompletionContext {
-    /// Use this transmitter to send the response of the request handled by the Swift runtime.
-    transmitter: Option<oneshot::Sender<Vec<u8>>>,
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_is_cancelled(context: *const std::ffi::c_void) -> bool {
+    if context.is_null() {
+        return true;
+    }
+
+    let inner = unsafe { Arc::from_raw(context as *const Inner) };
+    let cancelled = inner.state.load(Ordering::Acquire) == STATE_CANCELLED;
+    // We explicitly tell the Arc to not dereference inner.
+    // This is necessary for the context to outlive the scope of this functions,
+    // and be able to reach the Swift runtime for completion/handling.
+    std::mem::forget(inner);
+    // We could also just peek inside the Inner pointer without Arc to avoid reference counting.
+    // let inner: &Inner = unsafe { &*(context as *const Inner) };
+
+    return cancelled;
 }
 
 /// This function is called by the Swift runtime to signal that a request has been completed,
