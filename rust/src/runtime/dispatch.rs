@@ -35,6 +35,12 @@ pub async fn dispatch_to_swift(
         transmitter: Mutex::new(Some(transmitter)),
     });
 
+    // Hyper drops the request future (handled with dispatch_to_swift) when the client disconnects.
+    // When dispatch_to_swift is dropped, this guard runs.
+    let _cancel_on_drop = CancelOnDrop {
+        context: context.clone(),
+    };
+
     // Clone the context so that Rust keeps owning it, while passing a reference to Swift as well.
     // This is needed because into_raw would move the context variable,
     // and we wouldn't be able to use the context for cancellation logic from Rust.
@@ -60,11 +66,11 @@ pub async fn dispatch_to_swift(
         let mut guard = context.transmitter.lock().await;
         let _ = guard.take();
         return Err(DispatchErr::Timeout);
-    } else {
-        let response = tokio_response.unwrap();
-        match response {
-            Ok(bytes) => Ok(bytes),
-            Err(_recv_closed) => Err(DispatchErr::SwiftDropped),
-        }
+    }
+
+    let response = tokio_response.unwrap();
+    match response {
+        Ok(bytes) => Ok(bytes),
+        Err(_recv_closed) => Err(DispatchErr::SwiftDropped),
     }
 }

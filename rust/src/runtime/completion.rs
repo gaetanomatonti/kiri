@@ -1,4 +1,7 @@
-use std::sync::atomic::AtomicU8;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU8, Ordering},
+};
 
 use tokio::sync::{Mutex, oneshot};
 
@@ -16,4 +19,23 @@ pub struct CompletionContext {
     pub state: AtomicU8,
     /// Use this transmitter to send the response of the request handled by the Swift runtime.
     pub transmitter: Mutex<Option<oneshot::Sender<Vec<u8>>>>,
+}
+
+/// A type that cancels the request in the context when dropped.
+pub struct CancelOnDrop {
+    pub context: Arc<CompletionContext>,
+}
+
+impl Drop for CancelOnDrop {
+    fn drop(&mut self) {
+        // If PENDING transition to CANCELLED.
+        let _ = self.context.state.compare_exchange(
+            STATE_PENDING,
+            STATE_CANCELLED,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        );
+        // There is no need to take the transmitter inside the context,
+        // as the future will drop anyway on disconnect, so there is nothing to unblock.
+    }
 }

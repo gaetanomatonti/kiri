@@ -58,6 +58,8 @@ public func dispatch(
         cancellation: cancellationHandle,
       )
     } catch is CancellationError {
+      print("\(request.method) \(request.path) - cancelled")
+
       completionToken.complete(
         with: Response(status: 499, body: Data()),
         cancellation: cancellationHandle,
