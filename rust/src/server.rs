@@ -40,6 +40,11 @@ async fn handle(
 
     let response_frame = match swift_dispatch::dispatch_to_swift(handler_id, &request_frame).await {
         Ok(b) => b,
+        Err(swift_dispatch::DispatchErr::Timeout) => {
+            let mut response = Response::new(Body::from("timeout\n"));
+            *response.status_mut() = hyper::StatusCode::GATEWAY_TIMEOUT;
+            return Ok(response);
+        }
         Err(_) => {
             let mut response = Response::new(Body::from("swift dispatch failed\n"));
             *response.status_mut() = hyper::StatusCode::INTERNAL_SERVER_ERROR;
