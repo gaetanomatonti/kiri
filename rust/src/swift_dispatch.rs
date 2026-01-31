@@ -22,6 +22,7 @@ struct CompletionContext {
 
 /// This function is called by the Swift runtime to signal that a request has been completed,
 /// by passing the completion context, and the response content.
+/// **Must be called exactly once.**
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_complete(
     completion_ctx: *mut std::ffi::c_void,
@@ -45,9 +46,14 @@ pub extern "C" fn rust_complete(
 /// Delegates the handling of the request to the Swift runtime.
 pub async fn dispatch_to_swift(handler_id: HandlerId, req_frame: &[u8]) -> Result<Vec<u8>, ()> {
     let (transmitter, receiver) = oneshot::channel::<Vec<u8>>();
+
+    // In this case, we use Box (single ownership) because only the Swift runtime is responsible for freeing the completion context.
+    // This will be changed to Arc (shared ownership) when we introduce cancellation/timeout from Rust.
     let context = Box::new(CompletionContext {
         transmitter: Some(transmitter),
     });
+    // We get the pointer to the Box, and pass it to the Swift runtime,
+    // so that we can retrieve it back when Swift notifies the completion, and we can free the context inside the Box.
     let context_ptr = Box::into_raw(context) as *mut std::ffi::c_void;
 
     unsafe {

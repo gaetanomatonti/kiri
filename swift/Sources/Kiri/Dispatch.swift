@@ -16,6 +16,8 @@ public func dispatch(
   }
 
   // Wrap the pointer into a completion token, to make sure we complete (and free the pointer) exactly once.
+  // This is necessary because only Swift is responsible for freeing the context pointer,
+  // so freeing multiple times can cause double free/use-after-free.
   let completionToken = CompletionToken(completionContext)
 
   guard let requestPointer, requestLength > 0 else {
