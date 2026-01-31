@@ -1,7 +1,13 @@
 import Foundation
 
 enum FrameCodec {
-  static func decodeRequest(_ data: Data) -> Request? {
+  struct DecodedRequest {
+    let method: UInt8
+    let path: String
+    let body: Data
+  }
+
+  static func decodeRequest(_ data: Data) -> DecodedRequest? {
     var i = 0
     func u8() -> UInt8? { guard i+1 <= data.count else { return nil }; defer { i+=1 }; return data[i] }
     func u32() -> UInt32? {
@@ -19,7 +25,7 @@ enum FrameCodec {
       let body = bytes(Int(bodyLen))
       else { return nil }
 
-    return Request(method: method, path: path, body: body)
+    return DecodedRequest(method: method, path: path, body: body)
   }
 
   static func encodeResponse(_ resp: Response) -> Data {

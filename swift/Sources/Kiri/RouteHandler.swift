@@ -1,1 +1,1 @@
-public typealias RouteHandler = @Sendable (Request) async -> Response
+public typealias RouteHandler = @Sendable (Request) async throws -> Response

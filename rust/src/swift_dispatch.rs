@@ -38,6 +38,7 @@ unsafe extern "C" {
         req_ptr: *const u8,
         req_len: usize,
         completion_ctx: *mut std::ffi::c_void,
+        cancellation_handle: *mut std::ffi::c_void,
     );
 }
 
@@ -122,9 +123,16 @@ pub async fn dispatch_to_swift(
     // This is needed because into_raw would move the context variable,
     // and we wouldn't be able to use the context for cancellation logic from Rust.
     let context_ptr = Arc::into_raw(context.clone()) as *mut std::ffi::c_void;
+    let cancellation_ptr = Arc::into_raw(context.clone()) as *mut std::ffi::c_void;
 
     unsafe {
-        swift_dispatch(handler_id, req_frame.as_ptr(), req_frame.len(), context_ptr);
+        swift_dispatch(
+            handler_id,
+            req_frame.as_ptr(),
+            req_frame.len(),
+            context_ptr,
+            cancellation_ptr,
+        );
     }
 
     let timeout = std::time::Duration::from_secs(5);
