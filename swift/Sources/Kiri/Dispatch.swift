@@ -40,7 +40,7 @@ public func dispatch(
     cancellation: CancellationToken(handle: cancellationHandle),
   )
 
-  guard let handle = RouteRegistry.shared.handler(for: handlerId) else {
+  guard let route = RouteRegistry.shared.entry(for: handlerId) else {
     completionToken.complete(
       with: .internalServerError("missing handler"),
      cancellation: cancellationHandle,
@@ -50,7 +50,19 @@ public func dispatch(
 
   Task {
     do {
-      let response = try await handle(request)
+      let middlewares = RouteRegistry.shared.globalMiddlewares() + route.middlewares
+      var next = route.handler
+
+      // Wrap the route handler with the middlewares.
+      for middleware in middlewares.reversed() {
+        let current = next
+        next = { request in
+          try await middleware(request, current)
+        }
+      }
+
+      // Finally handle the request with middlewares applied.
+      let response = try await next(request)
       completionToken.complete(with: response, cancellation: cancellationHandle)
     } catch let error as HttpError {
       completionToken.complete(
@@ -60,6 +72,7 @@ public func dispatch(
     } catch is CancellationError {
       print("\(request.method) \(request.path) - cancelled")
 
+      // Mostly conceptual, as the client will never see the response, and Rust will have freed the request by now.
       completionToken.complete(
         with: Response(status: 499, body: Data()),
         cancellation: cancellationHandle,

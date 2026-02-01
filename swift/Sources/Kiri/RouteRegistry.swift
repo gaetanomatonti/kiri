@@ -4,35 +4,53 @@ final class RouteRegistry: @unchecked Sendable {
   public static let shared = RouteRegistry()
 
   private let lock = NSLock()
-
   private var nextId: RouteID
-
-  private var handlers: [RouteID: RouteHandler]
+  private var entries: [RouteID: RouteEntry]
+  private var middlewares: [Middleware]
 
   private init() {
     nextId = 0
-    handlers = [:]
+    entries = [:]
+    middlewares = []
   }
 
-  func register(_ handler: @escaping RouteHandler) -> RouteID {
+  func addGlobal(_ middleware: @escaping Middleware) {
     lock.lock()
-    let id = nextId
+    defer {
+      lock.unlock()
+    }
+
+    middlewares.append(middleware)
+  }
+
+  func globalMiddlewares() -> [Middleware] {
+    lock.lock()
+    defer {
+      lock.unlock()
+    }
+
+    return middlewares
+  }
+
+  func register(_ handler: @escaping RouteHandler, middlewares: [Middleware]) -> RouteID {
+    lock.lock()
     defer {
       nextId += 1
       lock.unlock()
     }
 
-    handlers[id] = handler
+    let id = nextId
+    entries[id] = RouteEntry(handler: handler, middlewares: middlewares)
     return id
   }
 
-  func handler(for id: RouteID) -> RouteHandler? {
+  func entry(for id: RouteID) -> RouteEntry? {
     lock.lock()
     defer {
       lock.unlock()
     }
 
-    let handler = handlers[id]
-    return handler
+    let entry = entries[id]
+    return entry
   }
 }

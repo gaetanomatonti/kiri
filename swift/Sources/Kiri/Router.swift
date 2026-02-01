@@ -11,25 +11,36 @@ public final class Router: @unchecked Sendable {
     kiri_router_free(_router)
   }
 
-  public func group(_ prefix: String, configure: (RouteGroup) -> Void) {
-    configure(RouteGroup(router: self, basePath: prefix))
+  public func use(_ middleware: @escaping Middleware) {
+    RouteRegistry.shared.addGlobal(middleware)
   }
 
-  public func register(_ method: HttpMethod, _ path: String, _ handler: @escaping RouteHandler) {
-    let routeId = RouteRegistry.shared.register(handler)
+  public func group(_ prefix: String, _ middlewares: Middleware..., configure: (RouteGroup) -> Void) {
+    configure(RouteGroup(router: self, basePath: prefix, middlewares: middlewares))
+  }
+
+  public func register(_ method: HttpMethod, _ path: String, _ middlewares: [Middleware], handler: @escaping RouteHandler) {
+    let routeId = RouteRegistry.shared.register(handler, middlewares: middlewares)
     registerRoute(method: method, pattern: path, routeId: routeId)
   }
 
-  public func get(_ path: String, _ handler: @escaping RouteHandler) {
-    register(.get, path, handler)
+  public func get(_ path: String, _ middlewares: Middleware..., handler: @escaping RouteHandler) {
+    register(.get, path, middlewares, handler: handler)
   }
 
-  func registerGrouped(method: HttpMethod, base: String, path: String, _ handler: @escaping RouteHandler) {
-    register(method, Path.join(base, path), handler)
+  func registerGrouped(
+    method: HttpMethod,
+    base: String,
+    path: String,
+    middlewares: [Middleware],
+    handler: @escaping RouteHandler
+  ) {
+    register(method, Path.join(base, path), middlewares, handler: handler)
   }
 
   private func registerRoute(method: HttpMethod, pattern: String, routeId: RouteID) {
-    guard let patternData = pattern.data(using: .utf8) else {
+    let normalizedPath = Path.join("", pattern)
+    guard let patternData = normalizedPath.data(using: .utf8) else {
       print("Failed to parse pattern \(pattern) into bytes")
       return
     }
