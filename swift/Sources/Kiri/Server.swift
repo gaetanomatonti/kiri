@@ -32,15 +32,16 @@ final class Server {
   }
 
   func start() throws {
-    guard serverHandle == nil else {
-      return
+    router.beginStart()
+
+    do {
+      try startWithRouter()
+    } catch {
+      router.rollbackStart()
+      throw error
     }
 
-    serverHandle = kiri_server_start_with_router(port, router._router)
-
-    guard serverHandle != nil else {
-      throw ServerError(lastError() ?? "Unexpected error")
-    }
+    router.commitStart()
   }
 
   func stop() {
@@ -50,5 +51,17 @@ final class Server {
 
     kiri_server_stop(serverHandle)
     self.serverHandle = nil
+  }
+
+  private func startWithRouter() throws {
+    guard serverHandle == nil else {
+      return
+    }
+
+    serverHandle = kiri_server_start_with_router(port, router._router)
+
+    guard serverHandle != nil else {
+      throw ServerError(lastError() ?? "Unexpected error")
+    }
   }
 }

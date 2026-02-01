@@ -1,10 +1,20 @@
+import Foundation
 import KiriFFI
 
 public final class Router: @unchecked Sendable {
+  enum Phase {
+    case building
+    case starting
+    case started
+  }
+
   let _router: UnsafeMutableRawPointer
+  private let lock = NSLock()
+  private var phase: Phase
 
   public init() {
     self._router = kiri_router_create()
+    self.phase = .building
   }
 
   deinit {
@@ -12,10 +22,12 @@ public final class Router: @unchecked Sendable {
   }
 
   public func use(_ middleware: @escaping Middleware) {
+    assertMutable()
     RouteRegistry.shared.addGlobal(middleware)
   }
 
   public func group(_ prefix: String, _ middlewares: Middleware..., configure: (RouteGroup) -> Void) {
+    assertMutable()
     configure(RouteGroup(router: self, basePath: prefix, middlewares: middlewares))
   }
 
@@ -38,7 +50,30 @@ public final class Router: @unchecked Sendable {
     register(method, Path.join(base, path), middlewares, handler: handler)
   }
 
+  func beginStart() {
+    lock.lock()
+    defer { lock.unlock() }
+    precondition(phase == .building, "Router already started/starting")
+    phase = .starting
+  }
+
+  func commitStart() {
+    lock.lock()
+    defer { lock.unlock() }
+    precondition(phase == .starting, "Invalid start transition")
+    phase = .started
+  }
+
+  func rollbackStart() {
+    lock.lock()
+    defer { lock.unlock() }
+    precondition(phase == .starting, "Invalid start rollback")
+    phase = .building
+  }
+
   private func registerRoute(method: HttpMethod, pattern: String, routeId: RouteID) {
+    assertMutable()
+
     let normalizedPath = Path.join("", pattern)
     guard let patternData = normalizedPath.data(using: .utf8) else {
       print("Failed to parse pattern \(pattern) into bytes")
@@ -58,7 +93,14 @@ public final class Router: @unchecked Sendable {
       )
     }
 
-    print("[Swift] Mapped \(method) \(pattern)")
     precondition(rc == 0, "register_route failed: \(rc)")
+    print("[Swift] Mapped \(method) \(pattern)")
+  }
+
+  private func assertMutable(_ function: StaticString = #function) {
+    lock.lock()
+    defer { lock.unlock() }
+
+    precondition(phase == .building, "Router is not mutable (\(phase)) when calling \(function)")
   }
 }
