@@ -17,7 +17,7 @@ public final class Router: @unchecked Sendable {
 
   public func register(_ method: HttpMethod, _ path: String, _ handler: @escaping RouteHandler) {
     let routeId = RouteRegistry.shared.register(handler)
-    registerRoute(method: .get, pattern: path, routeId: routeId)
+    registerRoute(method: method, pattern: path, routeId: routeId)
   }
 
   public func get(_ path: String, _ handler: @escaping RouteHandler) {
