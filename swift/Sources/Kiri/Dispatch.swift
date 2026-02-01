@@ -168,7 +168,7 @@ fileprivate final class CancellationHandle: @unchecked Sendable {
 
   deinit {
     if let pointer = pointer.take() {
-      kiri_request_free(pointer)
+      kiri_cancellation_free(pointer)
     }
   }
 }

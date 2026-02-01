@@ -34,6 +34,16 @@ pub extern "C" fn kiri_request_free(context: *const std::ffi::c_void) {
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn kiri_cancellation_free(context: *const std::ffi::c_void) {
+    if context.is_null() {
+        return;
+    }
+    unsafe {
+        drop(Arc::from_raw(context as *const CompletionContext));
+    }
+}
+
 /// This function is called by the Swift runtime to signal that a request has been completed,
 /// by passing the completion context, and the response content.
 /// **Must be called exactly once.**
