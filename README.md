@@ -1,93 +1,97 @@
 # Kiri (experimental)
 
-Kiri is an experimental HTTP server framework that aims to combine:
+Kiri is an **experimental HTTP server framework** that combines:
 
-- a **Swift-first developer experience** (routing APIs, handlers, etc.)
-- a **Rust/Tokio-based runtime** under the hood (server loop, networking)
+- a **Swift-first developer experience** (routing APIs, handlers, grouping)
+- a **Rust/Tokio-based runtime** under the hood (networking, server loop)
 
-This project exists primarily as a **learning exercise** to explore:
-- Swift ↔ Rust interoperability (FFI)
-- request routing across language boundaries
-- memory ownership and lifecycle across FFI
-- cooperative cancellation and timeouts
+The goal of the project is to explore how far a **hybrid Swift ↔ Rust architecture** can go while preserving:
+- performance (Tokio + Hyper)
+- safety (explicit ownership across FFI)
+- a pleasant Swift API for application logic
 
-> ⚠️ **Not for production use.**
-> This codebase is **not audited**, **not hardened**, and APIs/ABI may change at any time.
-> It’s currently meant only for **my learning purposes** and experimentation.
+> ⚠️ **Not for production use**
+>
+> This project is a **personal learning exercise**.
+> It is **not audited**, **not hardened**, and **APIs / ABI are unstable**.
+> Breaking changes are expected.
 
 ---
 
 ## What works today (MVP)
 
-- Start/stop an HTTP server implemented in Rust (Tokio + Hyper).
-- Register Swift routes (e.g. `GET /hello`) with handler closures.
-- Route requests in Rust and dispatch to Swift handlers via FFI.
-- Return responses back to Rust via a binary frame protocol.
-- Hard-coded request timeout (currently **5 seconds**).
-- Cooperative cancellation primitives exposed to Swift (opt-in checks).
+- Rust HTTP server using **Tokio + Hyper**
+- Swift-defined routes and handler closures
+- Route grouping on the Swift side (path prefixes)
+- Cross-language request dispatch via FFI
+- Binary request/response framing
+- Cooperative cancellation (timeouts + client disconnect)
+- Safe handling of late completions across FFI
+- Graceful startup errors (e.g. port already in use)
 
 ---
 
-## Architecture overview
+## High-level architecture
 
-### Request/response flow
+### Request lifecycle
 
-1. Swift registers routes and handlers.
-2. Rust accepts incoming HTTP requests.
-3. Rust matches `(method, path)` against registered routes.
-4. Rust calls into Swift (`swift_dispatch`) with an encoded request frame.
-5. Swift runs the handler and returns an encoded response frame via `rust_complete`.
-6. Rust decodes the response frame and writes the HTTP response.
+1. Swift creates a `Router` and registers routes.
+2. Swift starts the server with a snapshot of the router.
+3. Rust binds and starts serving HTTP requests.
+4. Rust matches `(method, path)` against the route table.
+5. Rust dispatches the request to Swift via `swift_dispatch`.
+6. Swift executes the handler and completes via `kiri_request_complete`.
+7. Rust writes the HTTP response.
 
-### FFI and ownership
+### Router / Server separation
 
-This project uses an **opaque handle** pattern over FFI:
-- Swift never dereferences Rust pointers.
-- Rust controls allocation/freeing.
-- Completion and cancellation are implemented using `Arc`-managed shared state to remain safe under timeouts and late completions.
+Kiri intentionally separates:
+- **Router** (configuration phase)
+- **Server** (serving phase)
 
----
-
-## Cancellation model (important)
-
-Cancellation is **cooperative** (opt-in), not automatic:
-
-- Rust may cancel a request due to timeout (and soon: client disconnect).
-- Swift handlers can check a `CancellationToken` and decide whether to stop early.
-- This keeps behavior predictable (e.g. handlers doing database work can decide whether to rollback/commit safely).
+Routes are registered *before* the server binds and are **snapshotted** at startup.
+This avoids races while keeping route registration fast and deterministic.
 
 ---
 
-## Status and roadmap
+## Swift ↔ Rust FFI model
 
-Immediate focus:
-- **Client disconnect cancellation** (in addition to timeout cancellation)
+- Rust owns all allocations exposed over FFI.
+- Swift holds opaque pointers only.
+- Shared request state is managed via `Arc`.
+- Completion and cancellation are safe under:
+  - timeouts
+  - client disconnects
+  - late Swift completions
 
-Planned improvements:
-- [ ] Better error handling and startup failures (e.g. port already in use)
-- [ ] Path params extraction (`/users/:id`)
-- [ ] Headers, query params
+---
+
+## Cancellation model
+
+Cancellation is **cooperative**, not automatic.
+
+- Rust may cancel requests due to:
+  - timeouts
+  - client disconnects
+- Swift handlers receive a cancellation handle and may:
+  - check cancellation explicitly
+  - stop early if appropriate
+
+This keeps behavior predictable for side-effectful work
+(e.g. database writes).
+
+---
+
+## Roadmap (short-term)
+
+- [ ] Path parameters (`/users/:id`)
+- [ ] Query parameters
+- [ ] Headers
 - [ ] Middleware
-- [ ] Better router performance (only when needed)
-
----
-
-## Building and running
-
-This repository contains:
-- a Rust library (Tokio/Hyper server runtime + FFI exports)
-- a Swift Package that links the Rust library and exposes Swift APIs
-
-The exact build steps may evolve; at a high level the workflow is:
-
-1. Build the Rust library (`cargo build`)
-2. Make the produced static lib available to SwiftPM (copy or configure search paths)
-3. Build/run the Swift executable that starts the server
-
-If you’re working on this repo, check the scripts or package configuration used in the current branch (this is still evolving).
+- [ ] Router performance optimizations (only if needed)
 
 ---
 
 ## License
 
-TBD (this is currently a personal learning project).
+TBD — this is currently a personal learning project.
