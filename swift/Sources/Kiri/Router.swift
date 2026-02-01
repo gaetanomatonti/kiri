@@ -11,12 +11,24 @@ public final class Router: @unchecked Sendable {
     kiri_router_free(_router)
   }
 
-  public func get(_ path: String, _ handler: @escaping RouteHandler) {
+  public func group(_ prefix: String, configure: (RouteGroup) -> Void) {
+    configure(RouteGroup(router: self, basePath: prefix))
+  }
+
+  public func register(_ method: HttpMethod, _ path: String, _ handler: @escaping RouteHandler) {
     let routeId = RouteRegistry.shared.register(handler)
     registerRoute(method: .get, pattern: path, routeId: routeId)
   }
 
-  func registerRoute(method: HttpMethod, pattern: String, routeId: RouteID) {
+  public func get(_ path: String, _ handler: @escaping RouteHandler) {
+    register(.get, path, handler)
+  }
+
+  func registerGrouped(method: HttpMethod, base: String, path: String, _ handler: @escaping RouteHandler) {
+    register(method, Path.join(base, path), handler)
+  }
+
+  private func registerRoute(method: HttpMethod, pattern: String, routeId: RouteID) {
     guard let patternData = pattern.data(using: .utf8) else {
       print("Failed to parse pattern \(pattern) into bytes")
       return
