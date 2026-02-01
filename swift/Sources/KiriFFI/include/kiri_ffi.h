@@ -4,10 +4,13 @@
 #include <stdbool.h>
 
 void* server_start(uint16_t port);
+void* server_start_with_router(uint16_t port, void* router);
 void server_stop(void* handle);
 
-int32_t register_route(
-  void* handle,
+void* router_create(void);
+void router_free(void *router);
+int32_t router_register_route(
+  void* router,
   uint8_t method,
   const uint8_t* pattern,
   size_t pattern_len,

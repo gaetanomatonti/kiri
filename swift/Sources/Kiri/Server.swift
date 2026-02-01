@@ -20,8 +20,11 @@ final class Server {
 
   private var serverHandle: ServerHandle?
 
-  init(port: UInt16) {
+  private let router: Router
+
+  init(port: UInt16, router: Router) {
     self.port = port
+    self.router = router
   }
 
   deinit {
@@ -33,7 +36,7 @@ final class Server {
       return
     }
 
-    serverHandle = server_start(port)
+    serverHandle = server_start_with_router(port, router._router)
 
     guard serverHandle != nil else {
       throw ServerError(lastError() ?? "Unexpected error")
@@ -47,32 +50,5 @@ final class Server {
 
     server_stop(serverHandle)
     self.serverHandle = nil
-  }
-
-  func registerRoute(method: HttpMethod, pattern: String, routeId: RouteRegistry.RouteID) {
-    guard let serverHandle else {
-      return
-    }
-
-    guard let patternData = pattern.data(using: .utf8) else {
-      print("Failed to parse pattern \(pattern) into bytes")
-      return
-    }
-
-    let rc: Int32 = patternData.withUnsafeBytes { buffer in
-      // Convert the pattern string to a bytes pointer
-      let pointer = buffer.bindMemory(to: UInt8.self).baseAddress
-
-      return register_route(
-        serverHandle,
-        method.rawValue,
-        pointer,
-        patternData.count,
-        routeId
-      )
-    }
-
-    print("[Swift] Mapped \(method) \(pattern)")
-    precondition(rc == 0, "register_route failed: \(rc)")
   }
 }

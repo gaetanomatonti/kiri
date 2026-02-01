@@ -2,15 +2,14 @@ import Foundation
 import Kiri
 
 do {
-  let app = App(port: 8080)
-  try app.start()
+  let router = Router()
+  router.get("/", get)
+  router.get("/hello", getHello)
+  router.get("/slow", slow)
+  router.get("/spin", spin)
 
-  app.get("/", get)
-  app.get("/hello", getHello)
-  app.get("/slow", slow)
-  app.get("/spin", spin)
-
-  app.run()
+  let app = App(port: 8080, router: router)
+  try app.run()
 } catch {
   print(error.localizedDescription)
 }

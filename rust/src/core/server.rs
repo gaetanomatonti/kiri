@@ -1,4 +1,8 @@
-use std::{net::SocketAddr, sync::mpsc};
+use std::{
+    net::SocketAddr,
+    sync::mpsc,
+    thread::{self, JoinHandle},
+};
 
 use hyper::{
     Body, Request, Response, Server,
@@ -8,8 +12,15 @@ use tokio::sync::oneshot;
 
 use crate::{
     core::{frames, router, types::SharedRoutes},
+    error::set_last_error,
     runtime::dispatch,
 };
+
+pub struct ServerHandle {
+    pub shutdown_transmitter: Option<oneshot::Sender<()>>,
+    pub join: Option<JoinHandle<()>>,
+    pub routes: SharedRoutes,
+}
 
 async fn handle(
     request: Request<Body>,
@@ -64,6 +75,58 @@ async fn handle(
     *response.status_mut() =
         hyper::StatusCode::from_u16(status).unwrap_or(hyper::StatusCode::INTERNAL_SERVER_ERROR);
     return Ok(response);
+}
+
+pub fn start_server(port: u16, routes: SharedRoutes) -> *mut ServerHandle {
+    println!("[Rust] starting server");
+
+    // Create a channel to send information across the async task.
+    // The transmitter transmits the shutdown request (client)
+    // and the receiver receives the request.
+    let (shutdown_transmitter, shutdown_receiver) = oneshot::channel::<()>();
+
+    let routes_for_thread = routes.clone();
+
+    let (ready_transmitter, ready_receiver) = mpsc::channel::<Result<(), String>>();
+
+    // We spawn a new thread for Tokio to run on to create a clear lifetime boundary.
+    // Returns the handler needed to wait for the thread to finish its work (join).
+    let join_handle = thread::spawn(move || {
+        // Pass the receiver to the run_server function to await any shutdown request from the transmitter.
+        run_server(
+            port,
+            shutdown_receiver,
+            routes_for_thread,
+            ready_transmitter,
+        );
+    });
+
+    match ready_receiver.recv() {
+        Ok(Ok(())) => {
+            // Return a server handle to the client so that it can:
+            // - transmit the shutdown request (shutdown_transmitter)
+            // - and await for the operation to finish (join)
+            let handle = ServerHandle {
+                shutdown_transmitter: Some(shutdown_transmitter),
+                join: Some(join_handle),
+                routes,
+            };
+
+            Box::into_raw(Box::new(handle))
+        }
+        Ok(Err(message)) => {
+            set_last_error(format!("Failed to start server: {}", message));
+            let _ = join_handle.join();
+            std::ptr::null_mut()
+        }
+        Err(_) => {
+            set_last_error(
+                "Failed to start server: internal error (startup channel closed)".to_string(),
+            );
+            let _ = join_handle.join();
+            std::ptr::null_mut()
+        }
+    }
 }
 
 pub fn run_server(
