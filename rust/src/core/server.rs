@@ -11,7 +11,10 @@ use hyper::{
 use tokio::sync::oneshot;
 
 use crate::{
-    core::{frames, router, types::SharedRoutes},
+    core::{
+        frames, router,
+        types::{Port, SharedRoutes},
+    },
     error::set_last_error,
     runtime::dispatch,
 };
@@ -77,7 +80,7 @@ async fn handle(
     return Ok(response);
 }
 
-pub fn start_server(port: u16, routes: SharedRoutes) -> *mut ServerHandle {
+pub fn start_server(port: Port, routes: SharedRoutes) -> *mut ServerHandle {
     println!("[Rust] starting server");
 
     // Create a channel to send information across the async task.
@@ -130,7 +133,7 @@ pub fn start_server(port: u16, routes: SharedRoutes) -> *mut ServerHandle {
 }
 
 pub fn run_server(
-    port: u16,
+    port: Port,
     shutdown_receiver: oneshot::Receiver<()>,
     routes: SharedRoutes,
     ready_transmitter: mpsc::Sender<Result<(), String>>,

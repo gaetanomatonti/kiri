@@ -7,7 +7,7 @@ use crate::{
         arc::arc_from_borrowed_ptr,
         router_handle::RouterHandle,
         server::{ServerHandle, start_server},
-        types::SharedRoutes,
+        types::{Port, SharedRoutes},
     },
     error::set_last_error,
 };
@@ -15,14 +15,14 @@ use crate::{
 /// Starts the server with empty routes and returns the server handle.
 /// Available for backwards compatibility.
 #[unsafe(no_mangle)]
-pub extern "C" fn server_start(port: u16) -> *mut ServerHandle {
+pub extern "C" fn server_start(port: Port) -> *mut ServerHandle {
     let routes: SharedRoutes = Arc::new(RwLock::new(Vec::new()));
     start_server(port, routes)
 }
 
 /// Starts the server and returns the server handle.
 #[unsafe(no_mangle)]
-pub extern "C" fn server_start_with_router(port: u16, router: *const c_void) -> *mut ServerHandle {
+pub extern "C" fn server_start_with_router(port: Port, router: *const c_void) -> *mut ServerHandle {
     if router.is_null() {
         set_last_error("router is null".to_string());
         return std::ptr::null_mut();

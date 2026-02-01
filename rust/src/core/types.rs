@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub type HandlerId = u16;
+pub type Port = u16;
+pub type StatusCode = u16;
+pub type HandlerId = u64;
 
 #[derive(Clone)]
 pub struct Route {

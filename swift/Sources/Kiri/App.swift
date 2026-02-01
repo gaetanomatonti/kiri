@@ -4,7 +4,7 @@ import Foundation
 final public class App {
   private let server: Server
 
-  public init(port: UInt16, router: Router) {
+  public init(port: Port, router: Router) {
     server = Server(port: port, router: router)
   }
 

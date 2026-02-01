@@ -14,7 +14,7 @@ int32_t router_register_route(
   uint8_t method,
   const uint8_t* pattern,
   size_t pattern_len,
-  uint16_t handler_id
+  uint64_t handler_id
 );
 
 void rust_complete(void* completion_ctx, const uint8_t* resp_ptr, size_t resp_len);

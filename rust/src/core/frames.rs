@@ -1,3 +1,5 @@
+use crate::core::types::StatusCode;
+
 /*
 * [u8  method]       -> 1
 * [u32 path_len]     -> 4
@@ -16,12 +18,12 @@ pub fn encode_request(method: u8, path: &str, body: &[u8]) -> Vec<u8> {
     return out;
 }
 
-pub fn decode_response(bytes: &[u8]) -> Option<(u16, Vec<u8>)> {
+pub fn decode_response(bytes: &[u8]) -> Option<(StatusCode, Vec<u8>)> {
     if bytes.len() < 6 {
         return None;
     }
 
-    let status = u16::from_le_bytes([bytes[0], bytes[1]]);
+    let status = StatusCode::from_le_bytes([bytes[0], bytes[1]]);
     let body_len = u32::from_le_bytes([bytes[2], bytes[3], bytes[4], bytes[5]]) as usize;
     if bytes.len() < 6 + body_len {
         return None;

@@ -1,10 +1,10 @@
 import Foundation
 
 public struct Response {
-  public let status: UInt16
+  public let status: StatusCode
   public let body: Data
 
-  public init(status: UInt16, body: Data) {
+  public init(status: StatusCode, body: Data) {
     self.status = status
     self.body = body
   }

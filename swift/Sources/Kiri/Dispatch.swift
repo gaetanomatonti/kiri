@@ -6,7 +6,7 @@ import KiriFFI
 // Rust passes a `completionContext` to communicate the completion of the request from the Swift runtime to Rust's.
 @_cdecl("swift_dispatch")
 public func dispatch(
-  handlerId: UInt16,
+  handlerId: RouteID,
   requestPointer: UnsafePointer<UInt8>?,
   requestLength: Int,
   completionContext: UnsafeMutableRawPointer?,

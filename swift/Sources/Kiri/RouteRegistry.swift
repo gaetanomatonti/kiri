@@ -1,8 +1,6 @@
 import Foundation
 
 final class RouteRegistry: @unchecked Sendable {
-  typealias RouteID = UInt16
-
   public static let shared = RouteRegistry()
 
   private let lock = NSLock()

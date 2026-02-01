@@ -16,7 +16,7 @@ public final class Router: @unchecked Sendable {
     registerRoute(method: .get, pattern: path, routeId: routeId)
   }
 
-  func registerRoute(method: HttpMethod, pattern: String, routeId: RouteRegistry.RouteID) {
+  func registerRoute(method: HttpMethod, pattern: String, routeId: RouteID) {
     guard let patternData = pattern.data(using: .utf8) else {
       print("Failed to parse pattern \(pattern) into bytes")
       return

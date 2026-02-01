@@ -16,13 +16,13 @@ struct ServerError: Error, LocalizedError {
 final class Server {
   typealias ServerHandle = UnsafeMutableRawPointer
 
-  let port: UInt16
+  let port: Port
 
   private var serverHandle: ServerHandle?
 
   private let router: Router
 
-  init(port: UInt16, router: Router) {
+  init(port: Port, router: Router) {
     self.port = port
     self.router = router
   }
