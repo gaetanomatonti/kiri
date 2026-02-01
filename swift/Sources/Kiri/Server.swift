@@ -36,7 +36,7 @@ final class Server {
       return
     }
 
-    serverHandle = server_start_with_router(port, router._router)
+    serverHandle = kiri_server_start_with_router(port, router._router)
 
     guard serverHandle != nil else {
       throw ServerError(lastError() ?? "Unexpected error")
@@ -48,7 +48,7 @@ final class Server {
       return
     }
 
-    server_stop(serverHandle)
+    kiri_server_stop(serverHandle)
     self.serverHandle = nil
   }
 }

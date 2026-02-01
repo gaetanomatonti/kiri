@@ -4,11 +4,11 @@ public final class Router: @unchecked Sendable {
   let _router: UnsafeMutableRawPointer
 
   public init() {
-    self._router = router_create()
+    self._router = kiri_router_create()
   }
 
   deinit {
-    router_free(_router)
+    kiri_router_free(_router)
   }
 
   public func get(_ path: String, _ handler: @escaping RouteHandler) {
@@ -26,7 +26,7 @@ public final class Router: @unchecked Sendable {
       // Convert the pattern string to a bytes pointer
       let pointer = buffer.bindMemory(to: UInt8.self).baseAddress
 
-      return router_register_route(
+      return kiri_router_register_route(
         _router,
         method.rawValue,
         pointer,

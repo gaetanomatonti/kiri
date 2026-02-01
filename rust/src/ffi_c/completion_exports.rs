@@ -7,7 +7,7 @@ use crate::runtime::completion::*;
 
 /// Swift calls this to check if a request has been cancelled.
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_is_cancelled(context: *const std::ffi::c_void) -> bool {
+pub extern "C" fn kiri_request_is_cancelled(context: *const std::ffi::c_void) -> bool {
     if context.is_null() {
         return true;
     }
@@ -25,7 +25,7 @@ pub extern "C" fn rust_is_cancelled(context: *const std::ffi::c_void) -> bool {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_release(context: *const std::ffi::c_void) {
+pub extern "C" fn kiri_request_free(context: *const std::ffi::c_void) {
     if context.is_null() {
         return;
     }
@@ -38,7 +38,7 @@ pub extern "C" fn rust_release(context: *const std::ffi::c_void) {
 /// by passing the completion context, and the response content.
 /// **Must be called exactly once.**
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_complete(
+pub extern "C" fn kiri_request_complete(
     completion_ctx: *mut std::ffi::c_void,
     resp_ptr: *const u8,
     resp_len: usize,

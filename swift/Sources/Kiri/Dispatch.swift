@@ -91,15 +91,15 @@ fileprivate final class CompletionToken: @unchecked Sendable {
     }
 
     // If the request is cancelled, release the completion context.
-    if cancellation.rawPointer.map({ rust_is_cancelled($0) }) ?? true {
-      rust_release(context)
+    if cancellation.rawPointer.map({ kiri_request_is_cancelled($0) }) ?? true {
+      kiri_request_free(context)
       return
     }
 
     let data = FrameCodec.encodeResponse(response)
     data.withUnsafeBytes { raw in
       let pointer = raw.bindMemory(to: UInt8.self).baseAddress
-      rust_complete(context, pointer, data.count)
+      kiri_request_complete(context, pointer, data.count)
     }
     return
   }
@@ -118,7 +118,7 @@ fileprivate final class CompletionToken: @unchecked Sendable {
       return
     }
 
-    rust_release(context)
+    kiri_request_free(context)
   }
 }
 
@@ -130,7 +130,7 @@ public struct CancellationToken: Sendable {
       return true
     }
 
-    return rust_is_cancelled(pointer)
+    return kiri_request_is_cancelled(pointer)
   }
 
   public func throwIfCancelled() throws {
@@ -155,7 +155,7 @@ fileprivate final class CancellationHandle: @unchecked Sendable {
 
   deinit {
     if let pointer = pointer.take() {
-      rust_release(pointer)
+      kiri_request_free(pointer)
     }
   }
 }

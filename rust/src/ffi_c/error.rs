@@ -12,7 +12,7 @@ pub fn set_last_error(message: String) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn last_error_message() -> *mut c_char {
+pub extern "C" fn kiri_last_error_message() -> *mut c_char {
     LAST_ERROR.with(|slot| {
         slot.borrow()
             .as_ref()
@@ -22,7 +22,7 @@ pub extern "C" fn last_error_message() -> *mut c_char {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn last_error_message_free(s: *mut c_char) {
+pub extern "C" fn kiri_last_error_message_free(s: *mut c_char) {
     if s.is_null() {
         return;
     }

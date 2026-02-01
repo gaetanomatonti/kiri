@@ -1,12 +1,12 @@
 import KiriFFI
 
 func lastError() -> String? {
-  guard let message = last_error_message() else {
+  guard let message = kiri_last_error_message() else {
     return nil
   }
 
   defer {
-    last_error_message_free(message)
+    kiri_last_error_message_free(message)
   }
 
   return String(cString: message)

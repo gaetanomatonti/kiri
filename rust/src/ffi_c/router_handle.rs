@@ -7,13 +7,13 @@ use crate::core::{
 };
 
 #[unsafe(no_mangle)]
-pub extern "C" fn router_create() -> *mut c_void {
+pub extern "C" fn kiri_router_create() -> *mut c_void {
     let router = Arc::new(RouterHandle::new());
     Arc::into_raw(router) as *mut c_void
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn router_free(router: *const c_void) {
+pub extern "C" fn kiri_router_free(router: *const c_void) {
     if router.is_null() {
         return;
     }
@@ -25,7 +25,7 @@ pub extern "C" fn router_free(router: *const c_void) {
 
 /// Returns 0 on success, non-zero on failures.
 #[unsafe(no_mangle)]
-pub extern "C" fn router_register_route(
+pub extern "C" fn kiri_router_register_route(
     router: *const c_void,
     method: u8,
     pattern_ptr: *const u8,
