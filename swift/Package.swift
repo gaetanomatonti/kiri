@@ -16,6 +16,10 @@ let package = Package(
       name: "Kiri",
       dependencies: ["KiriFFI"]
     ),
+    .testTarget(
+      name: "KiriTests",
+      dependencies: ["Kiri"]
+    ),
     .executableTarget(
       name: "KiriBench",
       dependencies: [.target(name: "Kiri")]
