@@ -103,4 +103,11 @@ public final class Router: @unchecked Sendable {
 
     precondition(phase == .building, "Router is not mutable (\(phase)) when calling \(function)")
   }
+
+  /// Registers routes for benchmarking purposes.
+  /// These routes will be handled by Rust to measure the overhead of the Swift library.
+  package func _registerBenchmarksRoutes() {
+    registerRoute(method: .get, pattern: "/__rust/plaintext", routeId: UInt64.max)
+    registerRoute(method: .get, pattern: "/__rust/noop", routeId: UInt64.max - 1)
+  }
 }

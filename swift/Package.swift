@@ -22,7 +22,10 @@ let package = Package(
     ),
     .executableTarget(
       name: "KiriBench",
-      dependencies: [.target(name: "Kiri")]
+      dependencies: [.target(name: "Kiri")],
+      swiftSettings: [
+        .define("KIRI_BENCH", .when(configuration: .release))
+      ],
     ),
   ]
 )
