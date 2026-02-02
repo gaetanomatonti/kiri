@@ -13,5 +13,5 @@ do {
   let app = App(port: 8080, router: router)
   try app.run()
 } catch {
-  print(error.localizedDescription)
+  //print(error.localizedDescription)
 }

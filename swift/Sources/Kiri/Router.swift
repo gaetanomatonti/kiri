@@ -76,7 +76,6 @@ public final class Router: @unchecked Sendable {
 
     let normalizedPath = Path.join("", pattern)
     guard let patternData = normalizedPath.data(using: .utf8) else {
-      print("Failed to parse pattern \(pattern) into bytes")
       return
     }
 
@@ -94,7 +93,6 @@ public final class Router: @unchecked Sendable {
     }
 
     precondition(rc == 0, "register_route failed: \(rc)")
-    print("[Swift] Mapped \(method) \(pattern)")
   }
 
   private func assertMutable(_ function: StaticString = #function) {

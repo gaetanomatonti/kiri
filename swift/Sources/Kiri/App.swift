@@ -16,8 +16,6 @@ final public class App {
     try server.start()
 
     Process.run { [weak self] in
-      print("\nStopping...")
-
       self?.stop()
     }
   }

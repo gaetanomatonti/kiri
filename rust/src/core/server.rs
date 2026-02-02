@@ -101,6 +101,7 @@ async fn handle(
 }
 
 pub fn start_server(port: Port, routes: SharedRoutes) -> *mut ServerHandle {
+    #[cfg(feature = "debug")]
     println!("[Rust] starting server");
 
     // Create a channel to send information across the async task.
@@ -188,10 +189,10 @@ pub fn run_server(
         let graceful = server.with_graceful_shutdown(async move {
             // When the shutdown request is received, shut the server down gracefully.
             let _ = shutdown_receiver.await;
-            println!("[Rust] stopping server");
         });
 
         if let Err(e) = graceful.await {
+            #[cfg(feature = "debug")]
             eprintln!("[Rust] server error: {e}");
         }
     })

@@ -70,8 +70,6 @@ public func dispatch(
         cancellation: cancellationHandle,
       )
     } catch is CancellationError {
-      print("\(request.method) \(request.path) - cancelled")
-
       // Mostly conceptual, as the client will never see the response, and Rust will have freed the request by now.
       completionToken.complete(
         with: Response(status: 499, body: Data()),
