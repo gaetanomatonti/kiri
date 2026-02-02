@@ -14,7 +14,7 @@ final class RouteRegistry: @unchecked Sendable {
     middlewares = []
   }
 
-  func addGlobal(_ middleware: @escaping Middleware) {
+  func addGlobal(_ middleware: Middleware) {
     lock.lock()
     defer {
       lock.unlock()

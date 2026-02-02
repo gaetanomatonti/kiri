@@ -57,7 +57,7 @@ public func dispatch(
       for middleware in middlewares.reversed() {
         let current = next
         next = { request in
-          try await middleware(request, current)
+          try await middleware.handle(request: request, next: current)
         }
       }
 

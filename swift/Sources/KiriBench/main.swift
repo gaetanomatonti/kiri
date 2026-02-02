@@ -10,6 +10,7 @@ LoggingSystem.bootstrap(StreamLogHandler.standardOutput)
 
 fileprivate let logger = Logger(label: "com.kiri-bench")
 let router = Router()
+router.use(.logging)
 
 router.get("/", handler: getHello)
 

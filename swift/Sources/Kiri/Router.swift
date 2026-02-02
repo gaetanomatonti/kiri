@@ -21,7 +21,7 @@ public final class Router: @unchecked Sendable {
     kiri_router_free(_router)
   }
 
-  public func use(_ middleware: @escaping Middleware) {
+  public func use(_ middleware: Middleware) {
     assertMutable()
     RouteRegistry.shared.addGlobal(middleware)
   }
