@@ -6,7 +6,8 @@ from typing import List, cast
 import matplotlib.pyplot as plt
 import pandas as pd
 
-OUT_DIR = "scripts/bench/.out"
+BASE_DIR = os.path.dirname(__file__)
+OUT_DIR = os.path.join(BASE_DIR, ".out")
 CSV_PATH = os.path.join(OUT_DIR, "results.csv")
 
 

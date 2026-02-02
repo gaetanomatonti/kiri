@@ -18,9 +18,25 @@ def to_ms(value, unit):
     return None
 
 
+FIELDNAMES = [
+    "file",
+    "impl",
+    "endpoint",
+    "threads",
+    "connections",
+    "duration_s",
+    "run",
+    "rps",
+    "latency_ms",
+    "ok",
+]
+
+base_dir = os.path.dirname(__file__)
+out_dir = os.path.join(base_dir, ".out")
+pattern = os.path.join(out_dir, "wrk__*.txt")
 rows = []
 
-for path in sorted(glob.glob("scripts/bench/.out/wrk__*.txt")):
+for path in sorted(glob.glob(pattern)):
     base = os.path.basename(path)
     # wrk__{impl}__{endpoint}__t{t}__c{c}__d{d}__run{n}.txt
     # split by "__"
@@ -75,10 +91,14 @@ for path in sorted(glob.glob("scripts/bench/.out/wrk__*.txt")):
         }
     )
 
-out_csv = ".out/results.csv"
+out_csv = os.path.join(out_dir, "results.csv")
+os.makedirs(out_dir, exist_ok=True)
 with open(out_csv, "w", newline="") as f:
-    w = csv.DictWriter(f, fieldnames=rows[0].keys())
+    w = csv.DictWriter(f, fieldnames=FIELDNAMES)
     w.writeheader()
     w.writerows(rows)
 
-print(f"Wrote {out_csv} with {len(rows)} rows")
+if rows:
+    print(f"Wrote {out_csv} with {len(rows)} rows")
+else:
+    print(f"Wrote {out_csv} with 0 rows (no files matched {pattern})")
