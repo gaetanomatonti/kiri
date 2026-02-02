@@ -13,6 +13,10 @@ public struct Response {
     Response(status: 200, body: Data(text.utf8))
   }
 
+  public static func noContent() -> Response {
+    Response(status: 204, body: Data())
+  }
+
   public static func internalServerError(_ text: String) -> Response {
     Response(status: 500, body: Data(text.utf8))
   }

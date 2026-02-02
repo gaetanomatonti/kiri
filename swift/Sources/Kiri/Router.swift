@@ -76,7 +76,6 @@ public final class Router: @unchecked Sendable {
 
     let normalizedPath = Path.join("", pattern)
     guard let patternData = normalizedPath.data(using: .utf8) else {
-      print("Failed to parse pattern \(pattern) into bytes")
       return
     }
 
@@ -94,7 +93,6 @@ public final class Router: @unchecked Sendable {
     }
 
     precondition(rc == 0, "register_route failed: \(rc)")
-    print("[Swift] Mapped \(method) \(pattern)")
   }
 
   private func assertMutable(_ function: StaticString = #function) {
@@ -102,5 +100,12 @@ public final class Router: @unchecked Sendable {
     defer { lock.unlock() }
 
     precondition(phase == .building, "Router is not mutable (\(phase)) when calling \(function)")
+  }
+
+  /// Registers routes for benchmarking purposes.
+  /// These routes will be handled by Rust to measure the overhead of the Swift library.
+  package func _registerBenchmarksRoutes() {
+    registerRoute(method: .get, pattern: "/__rust/plaintext", routeId: UInt64.max)
+    registerRoute(method: .get, pattern: "/__rust/noop", routeId: UInt64.max - 1)
   }
 }

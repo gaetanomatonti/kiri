@@ -19,6 +19,11 @@ use crate::{
     runtime::dispatch,
 };
 
+#[cfg(feature = "bench")]
+const BUILTIN_PLAINTEXT: u64 = u64::MAX;
+#[cfg(feature = "bench")]
+const BUILTIN_NOOP: u64 = u64::MAX - 1;
+
 pub struct ServerHandle {
     pub shutdown_transmitter: Option<oneshot::Sender<()>>,
     pub join: Option<JoinHandle<()>>,
@@ -47,6 +52,21 @@ async fn handle(
             return Ok(response);
         }
     };
+
+    #[cfg(feature = "bench")]
+    match handler_id {
+        BUILTIN_PLAINTEXT => {
+            let mut response = Response::new(Body::from("Hello, World!\n"));
+            *response.status_mut() = hyper::StatusCode::OK;
+            return Ok(response);
+        }
+        BUILTIN_NOOP => {
+            let mut response = Response::new(Body::empty());
+            *response.status_mut() = hyper::StatusCode::NO_CONTENT;
+            return Ok(response);
+        }
+        _ => {}
+    }
 
     let body_bytes = hyper::body::to_bytes(request.into_body()).await?;
     let request_frame = frames::encode_request(method, &path, &body_bytes);
@@ -81,6 +101,7 @@ async fn handle(
 }
 
 pub fn start_server(port: Port, routes: SharedRoutes) -> *mut ServerHandle {
+    #[cfg(feature = "debug")]
     println!("[Rust] starting server");
 
     // Create a channel to send information across the async task.
@@ -168,10 +189,10 @@ pub fn run_server(
         let graceful = server.with_graceful_shutdown(async move {
             // When the shutdown request is received, shut the server down gracefully.
             let _ = shutdown_receiver.await;
-            println!("[Rust] stopping server");
         });
 
         if let Err(e) = graceful.await {
+            #[cfg(feature = "debug")]
             eprintln!("[Rust] server error: {e}");
         }
     })

@@ -1,4 +1,5 @@
 /artifacts
+/scripts/bench/.out
 
 # Rust
 /target
