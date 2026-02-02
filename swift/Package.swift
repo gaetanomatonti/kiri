@@ -4,6 +4,9 @@ import PackageDescription
 let package = Package(
   name: "Kiri",
   platforms: [.macOS(.v26)],
+  dependencies: [
+    .package(url: "https://github.com/apple/swift-log", exact: "1.9.1"),
+  ],
   targets: [
     .target(
       name: "KiriFFI",
@@ -14,7 +17,10 @@ let package = Package(
     ),
     .target(
       name: "Kiri",
-      dependencies: ["KiriFFI"]
+      dependencies: [
+        "KiriFFI",
+        .product(name: "Logging", package: "swift-log"),
+      ]
     ),
     .testTarget(
       name: "KiriTests",
@@ -27,5 +33,5 @@ let package = Package(
         .define("KIRI_BENCH", .when(configuration: .release))
       ],
     ),
-  ]
+  ],
 )

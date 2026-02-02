@@ -8,3 +8,7 @@ func noop(_ request: Request) async -> Response {
 func plaintext(_ request: Request) async -> Response {
   .ok("Hello, World!")
 }
+
+func getHello(_ request: Request) async -> Response {
+  .ok("Hello from Kiri!")
+}
