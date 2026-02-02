@@ -75,4 +75,17 @@
     "show_summary": true,
     "show_command": true,
   },
+  {
+    "label": "Bench: run all",
+    "command": "sh scripts/run-benchmarks.sh",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "reveal_target": "dock",
+    "hide": "never",
+    "shell": "system",
+    "show_summary": true,
+    "show_command": true,
+  },
 ]
