@@ -1,0 +1,12 @@
+.git
+.DS_Store
+
+target
+artifacts
+scripts/bench/.out
+
+swift/.build
+bench/axum/target
+bench/gin/.build
+bench/vapor/.build
+bench/vapor/app/.build

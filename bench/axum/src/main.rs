@@ -24,10 +24,10 @@ async fn main() {
         .route("/noop", get(noop))
         .route("/plaintext", get(plaintext));
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     let listener = TcpListener::bind(addr)
         .await
-        .expect("failed to bind on 127.0.0.1:8080");
+        .expect("failed to bind on 0.0.0.0:8080");
 
     println!("Server running on port: {}", addr.port());
 

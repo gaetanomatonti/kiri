@@ -3,7 +3,6 @@ import PackageDescription
 
 let package = Package(
   name: "VaporBench",
-  platforms: [.macOS(.v14)],
   products: [
     .executable(name: "VaporBench", targets: ["App"]),
   ],

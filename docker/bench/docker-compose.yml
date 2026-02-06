@@ -1,0 +1,42 @@
+services:
+  kiri:
+    build:
+      context: ../..
+      dockerfile: docker/bench/kiri.Dockerfile
+    platform: linux/arm64
+    environment:
+      - KIRI_BIND_HOST=0.0.0.0
+    ports:
+      - "8080:8080"
+
+  axum:
+    build:
+      context: ../..
+      dockerfile: docker/bench/axum.Dockerfile
+    platform: linux/arm64
+    ports:
+      - "8080:8080"
+
+  vapor:
+    build:
+      context: ../..
+      dockerfile: docker/bench/vapor.Dockerfile
+    platform: linux/arm64
+    ports:
+      - "8080:8080"
+
+  gin:
+    build:
+      context: ../..
+      dockerfile: docker/bench/gin.Dockerfile
+    platform: linux/arm64
+    ports:
+      - "8080:8080"
+
+  oha:
+    build:
+      context: ../..
+      dockerfile: docker/bench/oha.Dockerfile
+    platform: linux/arm64
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

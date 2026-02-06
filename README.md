@@ -92,6 +92,38 @@ This keeps behavior predictable for side-effectful work
 
 ---
 
+## Benchmarking In Docker (Linux arm64)
+
+The repository includes a Docker setup for running benchmarks on a Linux arm64 environment, with one image per framework:
+
+- `kiri`
+- `axum`
+- `vapor`
+- `gin`
+
+And one dedicated load-generator image:
+
+- `oha`
+
+- Build and run all frameworks in full mode:
+  - `bash scripts/run-benchmarks.sh full all docker`
+- Run only one framework in light mode:
+  - `bash scripts/run-benchmarks.sh light vapor docker`
+  - `bash scripts/run-benchmarks.sh light gin docker`
+
+`scripts/run-benchmarks.sh` now supports both local and Docker execution:
+
+- `bash scripts/run-benchmarks.sh [light|full] [all|kiri|axum|vapor|gin] [local|docker]`
+- `local` is the default if the third argument is omitted.
+
+The helper script starts one framework container at a time and runs `oha` in a dedicated container against each target.
+It uses `docker/bench/docker-compose.yml` and the framework-specific Dockerfiles in `docker/bench/`.
+Benchmark output is written to `scripts/bench/.out` on the host.
+Load generation uses an `oha` container (service `oha` in compose), not a host-installed tool.
+Prerequisites on host: `docker`, `docker compose`, `python3` with `pandas` and `matplotlib`.
+
+---
+
 ## License
 
 TBD — this is currently a personal learning project.

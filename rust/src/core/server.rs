@@ -1,5 +1,5 @@
 use std::{
-    net::SocketAddr,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::mpsc,
     thread::{self, JoinHandle},
 };
@@ -165,7 +165,11 @@ pub fn run_server(
         .expect("Failed toclear build Tokio runtime");
 
     runtime.block_on(async move {
-        let address = SocketAddr::from(([127, 0, 0, 1], port));
+        let bind_ip = std::env::var("KIRI_BIND_HOST")
+            .ok()
+            .and_then(|value| value.parse::<IpAddr>().ok())
+            .unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST));
+        let address = SocketAddr::new(bind_ip, port);
 
         let builder = match Server::try_bind(&address) {
             Ok(builder) => {

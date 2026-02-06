@@ -78,7 +78,7 @@
   {
     "label": "Bench: run light",
     "command": "sh scripts/run-benchmarks.sh",
-    "args": ["light"],
+    "args": ["light", "all", "docker"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
@@ -92,7 +92,7 @@
   {
     "label": "Bench: run full",
     "command": "sh scripts/run-benchmarks.sh",
-    "args": ["full"],
+    "args": ["full", "all", "docker"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,

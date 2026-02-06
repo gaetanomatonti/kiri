@@ -8,6 +8,7 @@ enum Entrypoint {
 
     let app = try await Application.make(.production)
 
+    app.http.server.configuration.hostname = "0.0.0.0"
     app.http.server.configuration.port = 8080
 
     app.get("noop") { _ -> Response in

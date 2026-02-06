@@ -3,7 +3,6 @@ import PackageDescription
 
 let package = Package(
   name: "Kiri",
-  platforms: [.macOS(.v26)],
   dependencies: [
     .package(url: "https://github.com/apple/swift-log", exact: "1.9.1"),
   ],

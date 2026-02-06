@@ -22,7 +22,7 @@ func main() {
 		c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("Hello, World!"))
 	})
 
-	if err := router.Run("127.0.0.1:8080"); err != nil {
+	if err := router.Run("0.0.0.0:8080"); err != nil {
 		panic(err)
 	}
 }

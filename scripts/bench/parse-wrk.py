@@ -1,22 +1,7 @@
 import csv
 import glob
+import json
 import os
-import re
-
-REQ_RE = re.compile(r"Requests/sec:\s+([0-9.]+)")
-LAT_RE = re.compile(r"Latency\s+([0-9.]+)(us|ms|s)")
-
-
-def to_ms(value, unit):
-    v = float(value)
-    if unit == "us":
-        return v / 1000.0
-    if unit == "ms":
-        return v
-    if unit == "s":
-        return v * 1000.0
-    return None
-
 
 FIELDNAMES = [
     "file",
@@ -33,14 +18,14 @@ FIELDNAMES = [
 
 base_dir = os.path.dirname(__file__)
 out_dir = os.path.join(base_dir, ".out")
-pattern = os.path.join(out_dir, "wrk__*.txt")
+pattern = os.path.join(out_dir, "oha__*.json")
 rows = []
 
 for path in sorted(glob.glob(pattern)):
     base = os.path.basename(path)
-    # wrk__{impl}__{endpoint}__t{t}__c{c}__d{d}__run{n}.txt
+    # oha__{impl}__{endpoint}__t{t}__c{c}__d{d}__run{n}.json
     # split by "__"
-    parts = base.replace(".txt", "").split("__")
+    parts = base.replace(".json", "").split("__")
     if len(parts) != 7:
         continue
 
@@ -50,13 +35,26 @@ for path in sorted(glob.glob(pattern)):
     dur = int(dpart[1:])  # strip "d"
     run = int(runpart[3:])  # strip "run"
 
-    text = open(path, "r", encoding="utf-8", errors="ignore").read()
+    try:
+        payload = json.load(open(path, "r", encoding="utf-8"))
+    except Exception:
+        payload = {}
 
-    req = REQ_RE.search(text)
-    lat = LAT_RE.search(text)
+    summary = payload.get("summary", {}) if isinstance(payload, dict) else {}
 
-    if not req:
-        # keep a row that indicates failure (optional)
+    rps = summary.get("requestsPerSec")
+    if rps is None:
+        rps = summary.get("requests_per_sec")
+    if rps is None and isinstance(payload, dict):
+        rps = payload.get("requestsPerSec")
+
+    # oha average latency values are in seconds in JSON output.
+    lat_s = summary.get("average")
+    if lat_s is None:
+        lat_s = summary.get("avg")
+    lat_ms = float(lat_s) * 1000.0 if lat_s is not None else None
+
+    if rps is None:
         rows.append(
             {
                 "file": path,
@@ -73,9 +71,6 @@ for path in sorted(glob.glob(pattern)):
         )
         continue
 
-    rps = float(req.group(1))
-    lat_ms = to_ms(lat.group(1), lat.group(2)) if lat else None
-
     rows.append(
         {
             "file": path,
@@ -85,7 +80,7 @@ for path in sorted(glob.glob(pattern)):
             "connections": conns,
             "duration_s": dur,
             "run": run,
-            "rps": rps,
+            "rps": float(rps),
             "latency_ms": lat_ms if lat_ms is not None else "",
             "ok": "1",
         }
@@ -99,6 +94,6 @@ with open(out_csv, "w", newline="") as f:
     w.writerows(rows)
 
 if rows:
-    print(f"Wrote {out_csv} with {len(rows)} rows")
+    print(f"Wrote {out_csv} with {len(rows)} rows from oha output")
 else:
     print(f"Wrote {out_csv} with 0 rows (no files matched {pattern})")
