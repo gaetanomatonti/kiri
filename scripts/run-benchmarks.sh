@@ -15,15 +15,15 @@ case "$MODE" in
   light) RUNS=1 ;;
   full) RUNS=3 ;;
   *)
-    echo "Usage: $0 [light|full] [all|kiri|axum|vapor]"
+    echo "Usage: $0 [light|full] [all|kiri|axum|vapor|gin]"
     exit 1
     ;;
 esac
 
 case "$FRAMEWORK" in
-  all|kiri|axum|vapor) ;;
+  all|kiri|axum|vapor|gin) ;;
   *)
-    echo "Usage: $0 [light|full] [all|kiri|axum|vapor]"
+    echo "Usage: $0 [light|full] [all|kiri|axum|vapor|gin]"
     exit 1
     ;;
 esac
@@ -50,6 +50,11 @@ AXUM_ENDPOINTS=(
 VAPOR_ENDPOINTS=(
   "vapor:plaintext:/plaintext"
   "vapor:noop:/noop"
+)
+
+GIN_ENDPOINTS=(
+  "gin:plaintext:/plaintext"
+  "gin:noop:/noop"
 )
 
 mkdir -p "$OUT_DIR"
@@ -129,6 +134,22 @@ start_vapor() {
   SERVER_PID=$!
 }
 
+build_gin() {
+  mkdir -p bench/gin/.build
+  go build -C bench/gin -o .build/gin-bench .
+}
+
+start_gin() {
+  local bin="bench/gin/.build/gin-bench"
+  if [[ ! -x "$bin" ]]; then
+    echo "Could not find gin benchmark binary"
+    exit 1
+  fi
+
+  "$bin" &
+  SERVER_PID=$!
+}
+
 run_wrk () {
   local impl="$1"
   local endpoint="$2"
@@ -155,6 +176,7 @@ run_framework() {
     KIRI_ENDPOINTS) endpoints=("${KIRI_ENDPOINTS[@]}") ;;
     AXUM_ENDPOINTS) endpoints=("${AXUM_ENDPOINTS[@]}") ;;
     VAPOR_ENDPOINTS) endpoints=("${VAPOR_ENDPOINTS[@]}") ;;
+    GIN_ENDPOINTS) endpoints=("${GIN_ENDPOINTS[@]}") ;;
     *)
       echo "Unknown endpoint set: ${endpoints_var}"
       exit 1
@@ -193,6 +215,7 @@ case "$FRAMEWORK" in
     run_framework "KiriBench" build_kiri start_kiri KIRI_ENDPOINTS
     run_framework "Axum" build_axum start_axum AXUM_ENDPOINTS
     run_framework "Vapor" build_vapor start_vapor VAPOR_ENDPOINTS
+    run_framework "Gin" build_gin start_gin GIN_ENDPOINTS
     ;;
   kiri)
     run_framework "KiriBench" build_kiri start_kiri KIRI_ENDPOINTS
@@ -202,6 +225,9 @@ case "$FRAMEWORK" in
     ;;
   vapor)
     run_framework "Vapor" build_vapor start_vapor VAPOR_ENDPOINTS
+    ;;
+  gin)
+    run_framework "Gin" build_gin start_gin GIN_ENDPOINTS
     ;;
 esac
 

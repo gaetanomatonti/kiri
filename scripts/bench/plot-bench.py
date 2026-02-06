@@ -13,8 +13,11 @@ CSV_PATH = os.path.join(OUT_DIR, "results.csv")
 COLOR_MAP = {
     "kiri-rust": "tab:blue",
     "kiri-swift": "tab:orange",
+    "rust": "tab:blue",
+    "swift": "tab:orange",
     "axum": "tab:green",
     "vapor": "tab:purple",
+    "gin": "tab:cyan",
 }
 
 
@@ -158,7 +161,7 @@ def plot_metric_all(
 
 def _ordered_impls(impls: List[str]) -> List[str]:
     ordered: List[str] = []
-    for name in ["kiri-rust", "kiri-swift", "rust", "swift", "axum", "vapor"]:
+    for name in ["kiri-rust", "kiri-swift", "rust", "swift", "axum", "vapor", "gin"]:
         if name in impls:
             ordered.append(name)
     for name in impls:

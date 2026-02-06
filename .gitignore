@@ -10,5 +10,6 @@ swift/.build
 
 # Bench
 bench/axum/target
+bench/gin/.build
 bench/vapor/.build
 bench/vapor/app/.build
