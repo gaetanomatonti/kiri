@@ -1,3 +1,4 @@
+.DS_Store
 /artifacts
 /scripts/bench/.out
 
@@ -6,3 +7,8 @@
 
 # Swift
 swift/.build
+
+# Bench
+bench/axum/target
+bench/vapor/.build
+bench/vapor/app/.build

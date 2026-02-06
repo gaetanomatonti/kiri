@@ -3,7 +3,7 @@ import Kiri
 import Logging
 
 #if KIRI_BENCH
-LoggingSystem.bootstrap(SwiftLogNoOpLogHandler)
+LoggingSystem.bootstrap(SwiftLogNoOpLogHandler.init)
 #else
 LoggingSystem.bootstrap(StreamLogHandler.standardOutput)
 #endif
@@ -12,7 +12,9 @@ fileprivate let logger = Logger(label: "com.kiri-bench")
 let router = Router()
 router.use(.logging)
 
+#if !KIRI_BENCH
 router.get("/", handler: getHello)
+#endif
 
 #if KIRI_BENCH
 router.get("noop", handler: noop)
