@@ -147,8 +147,7 @@ install_darwin() {
 
 install_linux() {
   if ! command_exists apt-get; then
-    log "This installer currently supports Linux systems with apt-get."
-    log "Install dependencies manually on your distro, then rerun with --check."
+    log "Unsupported Linux distro. This installer supports Ubuntu/Debian with apt-get."
     exit 1
   fi
 
@@ -158,26 +157,30 @@ install_linux() {
       build-essential \
       ca-certificates \
       curl \
-      docker-compose-plugin \
       docker.io \
       golang-go \
       libssl-dev \
       pkg-config \
       python3 \
       python3-pip
+
+    if ! docker_compose_available; then
+      run_as_root apt-get install -y docker-compose-plugin || \
+      run_as_root apt-get install -y docker-compose-v2 || true
+    fi
   fi
 
   install_rust_with_rustup
 
   if ! command_exists swift; then
-    log "Swift is not installed."
-    log "Install Swift from https://www.swift.org/install/linux/ and rerun this script."
+    log "missing command: swift"
+    log "Install Swift from https://www.swift.org/install/linux/ then rerun this script."
     exit 1
   fi
 
   ensure_cmd docker "Install Docker."
   if ! docker_compose_available; then
-    log "docker compose is missing (install docker-compose-plugin)."
+    log "docker compose is missing. Install docker-compose-plugin or docker-compose-v2."
     exit 1
   fi
 
