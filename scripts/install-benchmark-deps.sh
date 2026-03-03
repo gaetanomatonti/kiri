@@ -20,6 +20,49 @@ command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+activate_swift_toolchain() {
+  if command_exists swift; then
+    return 0
+  fi
+
+  local env_candidates=(
+    "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
+    "${HOME}/.swiftly/env.sh"
+  )
+
+  local env_file
+  for env_file in "${env_candidates[@]}"; do
+    if [[ -f "${env_file}" ]]; then
+      # shellcheck disable=SC1090
+      source "${env_file}"
+      hash -r || true
+      if command_exists swift; then
+        return 0
+      fi
+    fi
+  done
+
+  local bin_candidates=(
+    "${SWIFTLY_BIN_DIR:-}"
+    "${HOME}/.local/share/swiftly/bin"
+    "${HOME}/.swiftly/bin"
+    "/opt/swift/usr/bin"
+    "/usr/local/swift/usr/bin"
+    "/usr/share/swift/usr/bin"
+  )
+
+  local bin_dir
+  for bin_dir in "${bin_candidates[@]}"; do
+    if [[ -n "${bin_dir}" && -x "${bin_dir}/swift" ]]; then
+      export PATH="${bin_dir}:${PATH}"
+      hash -r || true
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 run_as_root() {
   if [[ "${EUID}" -eq 0 ]]; then
     "$@"
@@ -115,7 +158,7 @@ install_darwin() {
 
   install_rust_with_rustup
 
-  if ! command_exists swift; then
+  if ! activate_swift_toolchain; then
     if [[ "${CHECK_ONLY}" -eq 1 ]]; then
       log "missing command: swift (install Xcode Command Line Tools)"
       exit 1
@@ -172,9 +215,10 @@ install_linux() {
 
   install_rust_with_rustup
 
-  if ! command_exists swift; then
+  if ! activate_swift_toolchain; then
     log "missing command: swift"
     log "Install Swift from https://www.swift.org/install/linux/ then rerun this script."
+    log "If you used swiftly, run: . \"${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh\""
     exit 1
   fi
 
@@ -210,6 +254,7 @@ main() {
 
   # shellcheck disable=SC1090
   [[ -f "${HOME}/.cargo/env" ]] && source "${HOME}/.cargo/env"
+  activate_swift_toolchain || true
 
   ensure_cmd cargo "Rust toolchain (cargo) is required."
   ensure_cmd go "Go is required."

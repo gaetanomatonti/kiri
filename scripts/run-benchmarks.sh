@@ -50,6 +50,8 @@ THREADS_LIST=(1)
 CONNS_LIST=(64 256 512)
 DURATION=15
 BASE_URL="http://127.0.0.1:8080"
+LOCAL_LOAD_BASE_URL="http://127.0.0.1:8080"
+OHA_RUNNER="docker"
 
 KIRI_ENDPOINTS=(
   "kiri-rust:plaintext:/__rust/plaintext"
@@ -80,6 +82,44 @@ ENDPOINTS_SELECTED=()
 
 compose() {
   docker compose -f "${COMPOSE_FILE}" "$@"
+}
+
+docker_compose_available() {
+  docker compose version >/dev/null 2>&1
+}
+
+docker_accessible() {
+  docker info >/dev/null 2>&1
+}
+
+configure_oha_runner() {
+  if [[ "${TARGET}" == "docker" ]]; then
+    if ! docker_compose_available || ! docker_accessible; then
+      echo "Docker mode requires access to docker compose and the Docker daemon."
+      echo "Fix Docker permissions or run local mode with a host-installed oha."
+      exit 1
+    fi
+    OHA_RUNNER="docker"
+    return
+  fi
+
+  if docker_compose_available && docker_accessible; then
+    OHA_RUNNER="docker"
+    LOCAL_LOAD_BASE_URL="http://host.docker.internal:8080"
+    return
+  fi
+
+  if command -v oha >/dev/null 2>&1; then
+    OHA_RUNNER="local"
+    LOCAL_LOAD_BASE_URL="${BASE_URL}"
+    return
+  fi
+
+  echo "Local benchmark mode needs one of:"
+  echo "1) Docker access (for oha container), or"
+  echo "2) A host-installed oha binary."
+  echo "Install oha with: cargo install --locked oha"
+  exit 1
 }
 
 stop_server() {
@@ -220,7 +260,20 @@ run_oha() {
   local file="${OUT_DIR}/oha__${impl}__${endpoint}__t${threads}__c${conns}__d${DURATION}__run${run}.json"
 
   echo ">> oha ${impl}/${endpoint} t=${threads} c=${conns} run=${run}"
-  if ! compose run --rm -T oha -c "$conns" -z "${DURATION}s" --output-format json "$url" > "$file" 2>&1; then
+  if [[ "${OHA_RUNNER}" == "docker" ]]; then
+    if ! compose run --rm -T oha -c "$conns" -z "${DURATION}s" --output-format json "$url" > "$file" 2>&1; then
+      echo "oha failed for ${impl}/${endpoint} (run=${run}, c=${conns}, d=${DURATION}s)"
+      echo "Saved output: ${file}"
+      echo "-- oha output (tail) --"
+      tail -n 120 "$file" || true
+      echo "-- end oha output --"
+      show_service_logs
+      return 1
+    fi
+    return
+  fi
+
+  if ! oha -c "$conns" -z "${DURATION}s" --output-format json "$url" > "$file" 2>&1; then
     echo "oha failed for ${impl}/${endpoint} (run=${run}, c=${conns}, d=${DURATION}s)"
     echo "Saved output: ${file}"
     echo "-- oha output (tail) --"
@@ -249,8 +302,14 @@ run_local_framework() {
   IFS=":" read -r _ _ warmup_path <<< "${ENDPOINTS_SELECTED[0]}"
   wait_for_server "$warmup_path" 30
 
-  if ! compose run --rm -T oha -c 32 -z 5s "http://host.docker.internal:8080${warmup_path}" > /dev/null 2>&1; then
-    echo "warning: local warmup failed for ${framework} (${warmup_path})"
+  if [[ "${OHA_RUNNER}" == "docker" ]]; then
+    if ! compose run --rm -T oha -c 32 -z 5s "${LOCAL_LOAD_BASE_URL}${warmup_path}" > /dev/null 2>&1; then
+      echo "warning: local warmup failed for ${framework} (${warmup_path})"
+    fi
+  else
+    if ! oha -c 32 -z 5s "${LOCAL_LOAD_BASE_URL}${warmup_path}" > /dev/null 2>&1; then
+      echo "warning: local warmup failed for ${framework} (${warmup_path})"
+    fi
   fi
 
   for t in "${THREADS_LIST[@]}"; do
@@ -258,7 +317,7 @@ run_local_framework() {
       for n in $(seq 1 "$RUNS"); do
         for e in "${ENDPOINTS_SELECTED[@]}"; do
           IFS=":" read -r impl endpoint path <<< "$e"
-          run_oha "http://host.docker.internal:8080" "$impl" "$endpoint" "$path" "$t" "$c" "$n"
+          run_oha "${LOCAL_LOAD_BASE_URL}" "$impl" "$endpoint" "$path" "$t" "$c" "$n"
         done
       done
     done
@@ -352,8 +411,10 @@ run_all_docker() {
 }
 
 if [[ "$TARGET" == "docker" ]]; then
+  configure_oha_runner
   run_all_docker
 else
+  configure_oha_runner
   # Ensure no stale docker framework container is holding port 8080.
   compose down --remove-orphans >/dev/null 2>&1 || true
   run_all_local
