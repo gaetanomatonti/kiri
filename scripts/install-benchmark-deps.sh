@@ -130,6 +130,19 @@ PY
   python3 -m pip install --user pandas matplotlib
 }
 
+install_oha() {
+  if [[ "${CHECK_ONLY}" -eq 1 ]]; then
+    ensure_cmd oha "Install oha with: cargo install --locked oha"
+    return 0
+  fi
+
+  if command_exists oha; then
+    return 0
+  fi
+
+  cargo install --locked oha
+}
+
 install_rust_with_rustup() {
   if command_exists cargo; then
     return 0
@@ -186,6 +199,7 @@ install_darwin() {
   ensure_cmd python3 "Install Python 3."
   ensure_cmd pip3 "Install pip for Python 3."
   install_python_packages
+  install_oha
 }
 
 install_linux() {
@@ -233,6 +247,7 @@ install_linux() {
   ensure_cmd python3 "Install Python 3."
   ensure_cmd pip3 "Install pip for Python 3."
   install_python_packages
+  install_oha
 }
 
 main() {
@@ -265,6 +280,7 @@ main() {
     exit 1
   fi
   ensure_cmd python3 "Python 3 is required."
+  ensure_cmd oha "oha is required."
 
   log "Benchmark dependencies are ready."
   cargo --version || true
@@ -273,6 +289,7 @@ main() {
   docker --version || true
   docker compose version || true
   python3 --version || true
+  oha --version || true
 }
 
 main "$@"
