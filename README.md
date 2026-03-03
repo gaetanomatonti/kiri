@@ -116,6 +116,10 @@ And one dedicated load-generator image:
 - `bash scripts/run-benchmarks.sh [light|full] [all|kiri|axum|vapor|gin] [local|docker]`
 - `local` is the default if the third argument is omitted.
 
+Install benchmark dependencies on the host first:
+- `bash scripts/install-benchmark-deps.sh`
+- Optional verification only: `bash scripts/install-benchmark-deps.sh --check`
+
 The helper script starts one framework container at a time and runs `oha` in a dedicated container against each target.
 It uses `docker/bench/docker-compose.yml` and the framework-specific Dockerfiles in `docker/bench/`.
 Benchmark output is written to `scripts/bench/.out` on the host.
